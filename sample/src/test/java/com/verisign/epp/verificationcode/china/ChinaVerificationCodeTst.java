@@ -85,7 +85,7 @@ public class ChinaVerificationCodeTst extends TestCase {
 			.getInstance();
 
 	/** Name of configuration file to use for test (default = epp.config). */
-	private static String configFileName = "epp.config";
+	private static String configFileName = "epp-china-verification.config";
 
 	/** Logging category */
 	private static final Logger cat = Logger.getLogger(
@@ -2645,9 +2645,9 @@ public class ChinaVerificationCodeTst extends TestCase {
 				vspPoolExists = false;
 
 				// Read the DNVC from the dnvc.b64 file to dnvc static attribute
-				File theDnvcFile = new File("mnt/epp/dnvc.b64");
+				File theDnvcFile = new File("dnvc.b64");
 				if (!theDnvcFile.exists() || !theDnvcFile.canRead()) {
-					Assert.fail("dnvc.64 does not exist or is not readable");
+					Assert.fail("dnvc.b64 does not exist or is not readable");
 				}
 				String theDnvc = FileUtils
 						.readFully(new FileReader(theDnvcFile));
@@ -2657,7 +2657,7 @@ public class ChinaVerificationCodeTst extends TestCase {
 						"ChinaVerificationCodeTstSetup: Successfully loaded DNVC from dnvc.b64");
 
 				// Read the RNVC from the rnvc.b64 file to rnvc static attribute
-				File theRnvcFile = new File("mnt/epp/rnvc.b64");
+				File theRnvcFile = new File("rnvc.b64");
 				if (!theRnvcFile.exists() || !theRnvcFile.canRead()) {
 					Assert.fail("rnvc.64 does not exist or is not readable");
 				}
