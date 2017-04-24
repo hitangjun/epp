@@ -73,6 +73,7 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/epp-verisign-1.9.0.1.jar</systemPath>
         </dependency>
+
     </dependencies>
 
     <build>
@@ -89,5 +90,5 @@
                 </configuration>
             </plugin>
         </plugins>
-</build>
+    </build>
 </project>

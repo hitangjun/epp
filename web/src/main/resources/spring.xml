@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   		http://www.springframework.org/schema/beans/spring-beans.xsd
+	   		http://www.springframework.org/schema/context
+	   		http://www.springframework.org/schema/context/spring-context.xsd">
+    <!-- property configuration -->
+    <bean id="cfgProperties" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="locations">
+            <list>
+                <value>classpath:config.properties</value>         <!-- 系统参数配置  -->
+            </list>
+        </property>
+    </bean>
+    <bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="properties" ref="cfgProperties"/>
+    </bean>
+
+    <bean class="com.hihexo.epp.common.base.SpringContextHolder"/>
+    <!--扫描包-->
+    <context:component-scan base-package="com.hihexo.epp"/>
+
+    <!--import 子模块 mybatis db TODO-->
+    <!--<import resource="classpath:spring/spring-mybatis.xml"/>-->
+    <!--<import resource="classpath:spring/spring-mvc.xml"/>-->
+</beans>
+
+

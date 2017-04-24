@@ -12,10 +12,15 @@
     <artifactId>sample</artifactId>
 
     <dependencies>
+        <!--<dependency>-->
+            <!--<groupId>com.hihexo.epp</groupId>-->
+            <!--<artifactId>core-sdk</artifactId>-->
+            <!--<version>1.0-SNAPSHOT</version>-->
+        <!--</dependency>-->
         <dependency>
             <groupId>com.hihexo.epp</groupId>
-            <artifactId>core-sdk</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <artifactId>epp-src-1.10.0.3</artifactId>
+            <version>1.10.0.3</version>
         </dependency>
     </dependencies>
 

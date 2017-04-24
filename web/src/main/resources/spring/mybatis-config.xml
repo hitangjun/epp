@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org/DTD Config 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<!-- 需保持顺序 -->
+	<properties>
+		<property name="" value=""/>
+		<property name="dialect" value="mysql"/>
+	</properties>
+	
+	<settings>
+		<setting name="cacheEnabled" value="false"/>
+		<setting name="lazyLoadingEnabled" value="true"/>
+		<setting name="aggressiveLazyLoading" value="false"/>
+		<setting name="multipleResultSetsEnabled" value="true"/>
+		<setting name="useGeneratedKeys" value="true"/>
+		<setting name="defaultExecutorType" value="SIMPLE"/>
+  		<setting name="defaultStatementTimeout" value="25000"/>
+	</settings>
+	
+	<!-- 别名 -->
+	<typeAliases>
+		<!-- 公共 -->
+		<!-- 模块 建议使用package -->
+		<package name="com.hihexo.epp.model"/>
+	</typeAliases>
+	<!-- 
+	<typeHandlers>
+		
+	</typeHandlers>
+	
+	<objectFactory type="">
+	
+	</objectFactory>
+	
+	<objectWrapperFactory type="">
+		
+	</objectWrapperFactory>
+
+	<plugins>
+		<plugin interceptor=""></plugin>
+	</plugins>
+
+	<environments default="">
+	</environments>
+	
+	<databaseIdProvider type="">
+		
+	</databaseIdProvider>
+	
+	<mappers>
+	
+	</mappers>
+	 -->
+	
+</configuration>

@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema targetNamespace="urn:ietf:params:xml:ns:idnTable-1.0"
+  xmlns:idnTable="urn:ietf:params:xml:ns:idnTable-1.0"
+  xmlns:eppcom="urn:ietf:params:xml:ns:eppcom-1.0" 
+  xmlns="http://www.w3.org/2001/XMLSchema"
+  elementFormDefault="qualified">
+
+  <annotation>
+    <documentation>
+      Extensible Provisioning Protocol v1.0
+      IDN Table Mapping.
+    </documentation>
+  </annotation>
+
+  <!-- imports -->
+  <import namespace="urn:ietf:params:xml:ns:eppcom-1.0" 
+    schemaLocation="eppcom-1.0.xsd"/>
+
+  <!-- 
+  Child elements found in EPP commands.  
+  -->
+  <element name="check" type="idnTable:checkType"/>
+  <element name="info" type="idnTable:infoType"/>
+
+  <!-- 
+   Form of the domain name.
+   -->
+  <simpleType name="domainFormType">
+    <restriction base="token">
+      <enumeration value="aLabel"/>
+      <enumeration value="uLabel"/>
+    </restriction>
+  </simpleType>
+
+  <!--
+   Domain label element.
+  -->
+  <complexType name="domainLabelType">
+    <simpleContent>
+      <extension base="eppcom:labelType">
+        <attribute name="form" type="idnTable:domainFormType"
+          default="aLabel"/>
+      </extension>
+    </simpleContent>
+  </complexType>
+  
+
+  <!-- 
+  Child elements of check command.  
+  -->
+  <complexType name="checkType">
+    <sequence>
+      <choice>
+        <element name="table" type="eppcom:minTokenType" 
+          maxOccurs="unbounded"/>
+        <element name="domain" type="idnTable:domainLabelType" 
+          maxOccurs="unbounded"/>
+      </choice>
+    </sequence>
+  </complexType>
+
+
+  <!-- 
+  Child elements of info command.  
+  -->
+  <complexType name="infoType">
+    <sequence>
+      <choice>
+        <element name="table" type="eppcom:minTokenType"/>
+        <element name="domain" type="idnTable:domainLabelType"/>
+        <element name="list"/>
+      </choice>
+    </sequence>
+  </complexType>
+
+
+  <!-- 
+  Child response elements.  
+  -->
+  <element name="chkData" type="idnTable:chkDataType"/>
+  <element name="infData" type="idnTable:infDataType"/>
+
+  <!-- 
+  Child elements of check response.  
+  -->
+  <complexType name="chkDataType">
+    <sequence>
+      <choice>
+        <element name="table" type="idnTable:chkTableType" 
+          maxOccurs="unbounded"/>
+        <element name="domain" type="idnTable:chkDomainType" 
+          maxOccurs="unbounded"/>
+      </choice>
+    </sequence>
+  </complexType>
+
+  <!-- 
+  Table check response element  
+  -->
+  <complexType name="chkTableType">
+    <simpleContent>
+      <extension base="eppcom:minTokenType">
+        <attribute name="exists" type="boolean" use="required"/>
+      </extension>
+    </simpleContent>
+  </complexType>
+
+
+  <!-- 
+  Domain name check response element  
+  -->
+  <complexType name="domainNameType">
+    <simpleContent>
+      <extension base="eppcom:labelType">
+        <attribute name="valid" type="boolean" use="required"/>
+        <attribute name="idnmap" type="boolean" default="true"/>
+      </extension>
+    </simpleContent>
+  </complexType>
+
+  <!-- 
+  Domain check response element  
+  -->
+  <complexType name="chkDomainType">
+    <sequence>
+      <element name="name" type="idnTable:domainNameType"/>
+      <choice>
+        <element name="reason" type="eppcom:reasonType"/>
+        <element name="table" type="eppcom:minTokenType" 
+          maxOccurs="unbounded"/>
+      </choice>
+    </sequence>
+  </complexType>
+
+
+  <!-- 
+  Child elements of info response.  
+  -->
+  <complexType name="infDataType">
+    <sequence>
+      <choice>
+        <element name="table" type="idnTable:infTableType"/>
+        <element name="domain" type="idnTable:infDomainType"/>
+        <element name="list" type="idnTable:infListType"/>
+      </choice>
+    </sequence>
+  </complexType>
+
+  <!-- 
+  Table types  
+  -->
+  <simpleType name="tableTypeEnumType">
+    <restriction base="token">
+      <enumeration value="language"/>
+      <enumeration value="script"/>
+    </restriction>
+  </simpleType>
+
+  <complexType name="descriptionType">
+    <simpleContent>
+      <extension base="token">
+        <attribute name="lang" type="language"/>
+      </extension>
+    </simpleContent>
+  </complexType>
+
+
+  <!-- 
+  Table info response information
+  -->
+  <complexType name="infTableType">
+    <sequence>
+      <element name="name" type="eppcom:minTokenType"/>
+      <element name="type" type="idnTable:tableTypeEnumType"/>
+      <element name="description" type="idnTable:descriptionType"/>
+      <element name="upDate" type="dateTime"/>
+      <element name="version" type="token" minOccurs="0"/>
+      <element name="effectiveDate" type="date" minOccurs="0"/>
+      <element name="variantGen" type="boolean" minOccurs="0"/>
+      <element name="url" type="anyURI" minOccurs="0"/>
+    </sequence>
+  </complexType>
+
+  <!-- 
+  Domain info response information
+  -->
+  <complexType name="infDomainType">
+    <sequence>
+      <element name="name" type="idnTable:domainNameType"/>
+      <choice minOccurs="0">
+        <element name="uname" type="eppcom:labelType"/>
+        <element name="aname" type="eppcom:labelType"/>
+      </choice>
+      <element name="table" type="idnTable:infDomainTableType" 
+        minOccurs="0" maxOccurs="unbounded"/>
+    </sequence>
+  </complexType>
+
+  <!-- 
+  Domain table info response information
+  -->
+  <complexType name="infDomainTableType">
+    <sequence>
+      <element name="name" type="eppcom:minTokenType"/>
+      <element name="type" type="idnTable:tableTypeEnumType"/>
+      <element name="description" type="idnTable:descriptionType"/>
+      <element name="variantGen" type="boolean" minOccurs="0"/>
+    </sequence>
+  </complexType>
+
+
+  <!-- 
+  Table list info response information.
+  -->
+  <complexType name="infListType">
+    <sequence>
+      <element name="table" type="idnTable:infListTableType" 
+        minOccurs="0" maxOccurs="unbounded"/>
+    </sequence>
+  </complexType>
+  
+  <!--
+  Table elements in list info form.
+  -->
+  <complexType name="infListTableType">
+    <sequence>
+      <element name="name" type="eppcom:minTokenType"/>
+      <element name="upDate" type="dateTime"/>
+    </sequence>
+  </complexType>
+
+  <!-- End of schema.-->
+</schema>

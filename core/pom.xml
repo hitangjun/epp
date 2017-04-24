@@ -13,6 +13,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>core-sdk</module>
+        <module>epp-src-1.10.0.3</module>
     </modules>
 
 

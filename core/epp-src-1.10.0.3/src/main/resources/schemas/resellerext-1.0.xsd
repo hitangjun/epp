@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<schema targetNamespace="urn:ietf:params:xml:ns:resellerext-1.0"
+        xmlns:resellerext="urn:ietf:params:xml:ns:resellerext-1.0"
+        xmlns:epp="urn:ietf:params:xml:ns:epp-1.0"
+        xmlns:eppcom="urn:ietf:params:xml:ns:eppcom-1.0"
+        xmlns="http://www.w3.org/2001/XMLSchema"
+        elementFormDefault="qualified">
+
+<!--
+Import common element types.
+-->
+  <import namespace="urn:ietf:params:xml:ns:eppcom-1.0"
+          schemaLocation="eppcom-1.0.xsd"/>
+  <import namespace="urn:ietf:params:xml:ns:epp-1.0"
+          schemaLocation="epp-1.0.xsd"/>
+
+  <annotation>
+    <documentation>
+      Extensible Provisioning Protocol v1.0
+      Domain Reseller Extension Schema v1.0
+    </documentation>
+  </annotation>
+
+<!-- Child elements found in EPP commands. -->
+  <element name="create" type="resellerext:createType"/>
+  <element name="update" type="resellerext:updateType"/>
+
+<!-- reseller name type-->
+  <simpleType name="resNameType">
+     <restriction base="normalizedString">
+       <minLength value="1"/>
+       <maxLength value="255"/>
+     </restriction>
+  </simpleType>
+
+<!-- Child elements of the <resellerext:create> command
+All elements must be present at time of creation
+-->
+  <complexType name="createType">
+    <sequence>
+      <!-- agent identifier that sells the domain, e.g. registrar, reseller -->
+      <element name="id" type="eppcom:clIDType"/>
+    </sequence>
+  </complexType>
+
+<!--
+Child elements of <resellerext:update> command
+-->
+
+  <complexType name="updateType">
+    <sequence>
+      <element name="add" type="resellerext:addRemChgType" minOccurs="0"/>
+      <element name="rem" type="resellerext:addRemChgType" minOccurs="0"/>
+      <element name="chg" type="resellerext:addRemChgType" minOccurs="0"/>
+    </sequence>
+  </complexType>
+
+  <complexType name="addRemChgType">
+    <sequence>
+      <!-- agent identifier that sells the domain, e.g. registrar, reseller -->
+      <element name="id" type="eppcom:clIDType" minOccurs="0"/>
+    </sequence>
+  </complexType>
+
+<!-- Child response element -->
+
+  <element name="infData" type="resellerext:infDataType"/>
+
+<!-- <resellerext:infData> response elements -->
+
+  <complexType name="infDataType">
+    <sequence>
+      <!-- agent identifier that sells the domain, e.g. registrar, reseller -->
+      <element name="id" type="eppcom:clIDType" minOccurs="0"/>
+      <!-- agent name that sells the domain, e.g. registrar, reseller -->
+      <element name="name" type="resellerext:resNameType" minOccurs="0"/>
+    </sequence>
+  </complexType>
+
+<!-- End of schema. -->
+</schema>
