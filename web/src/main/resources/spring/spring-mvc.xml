@@ -20,14 +20,6 @@
 
     <aop:aspectj-autoproxy/>
     <aop:aspectj-autoproxy proxy-target-class="true" />
-    <!--避免IE执行AJAX时，返回JSON出现下载文件 
-    <bean id="mappingJacksonHttpMessageConverter" class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
-      <property name="supportedMediaTypes">
-        <list>
-          <value>text/html;charset=UTF-8</value>
-        </list>
-      </property>
-    </bean>-->
 
     <!-- 直接读取静态资源 -->
     <mvc:default-servlet-handler/>
@@ -47,18 +39,6 @@
             </bean>
         </mvc:message-converters>
     </mvc:annotation-driven>
-
-    <!-- REST中根据URL后缀自动判定Content-Type及相应的View 
-     <bean id="contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
-         <property name="mediaTypes">
-             <value>
-                 json=application/json
-                 xml=application/xml
-             </value>
-         </property>
-         <property name="ignoreAcceptHeader" value="true"/>
-         <property name="favorPathExtension" value="true"/>
-     </bean>-->
 
     <!-- 启动SpringMVC的注解功能，完成请求和注解POJO的映射 -->
     <bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">

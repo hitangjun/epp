@@ -1,4 +1,4 @@
-package com.hihexo.epp;
+package com.hihexo.epp.controller;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;

@@ -1,4 +1,4 @@
-package com.hihexo.epp.util;
+package com.hihexo.epp.common.util;
 
 import javax.servlet.http.HttpServletRequest;
 

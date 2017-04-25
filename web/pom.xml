@@ -144,18 +144,29 @@
         <dependency>
             <groupId>io.springfox</groupId>
             <artifactId>springfox-swagger2</artifactId>
-            <version>2.4.0</version>
+            <version>2.2.0</version>
         </dependency>
         <dependency>
             <groupId>io.springfox</groupId>
             <artifactId>springfox-swagger-ui</artifactId>
-            <version>2.4.0</version>
+            <version>2.2.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.hihexo.epp</groupId>
             <artifactId>epp-src-1.10.0.3</artifactId>
             <version>1.10.0.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.hihexo.epp</groupId>
+            <artifactId>core-util</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hihexo.epp</groupId>
+            <artifactId>core-util</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 

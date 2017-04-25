@@ -1,6 +1,6 @@
 package com.hihexo.epp.common.interceptor;
 
-import com.hihexo.epp.util.IPutil;
+import com.hihexo.epp.common.util.IPutil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -34,12 +34,6 @@ public class RequestInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * CLIENT-TYPE 1|2
-     * VERSION
-     * APIVERSION 1.0
-     * TIME 时间戳
-     * POSTFIX : encryptStr = AES_encrypt(clientType+"|"+version+"|"+apiVersion+"|"+TIME,md5(TIME))
-     *
      * @param request
      * @param response
      * @param handler
@@ -51,7 +45,7 @@ public class RequestInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String ip = IPutil.getIpAddr(request);
         String path = request.getServletPath();
-        logger.debug("===> " + ip + " --  path ");
+        logger.debug("===> " + ip + " --  "+path);
 
  		logParams(request);
 //        if (isInvalidHeader(request)) {
