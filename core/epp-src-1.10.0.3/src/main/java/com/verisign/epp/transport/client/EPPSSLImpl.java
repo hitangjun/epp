@@ -19,28 +19,19 @@
  ***********************************************************/
 package com.verisign.epp.transport.client;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-
-import org.apache.log4j.Logger;
-
 import com.verisign.epp.exception.EPPException;
 import com.verisign.epp.transport.EPPConException;
 import com.verisign.epp.util.EPPCatFactory;
 import com.verisign.epp.util.EPPEnv;
+import org.apache.log4j.Logger;
+
+import javax.net.ssl.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.security.*;
+import java.security.cert.CertificateException;
 
 /**
  * EPP SSL Implementation utility class that is used to initialize the SSL
@@ -282,9 +273,11 @@ public class EPPSSLImpl {
 					thePassphrase);
 		}
 		catch (CertificateException ex) {
+			File curPath = new File(".");
+			System.out.println("==>load keystore file current dir : "+curPath.getAbsolutePath());
 			logger.error(
 					"initialize(EPPSSLConfig): The given certificates in the keystore could not be loaded "
-							+ "(" + theKeyStoreFileName + ") "
+							+ "(" + curPath.getAbsolutePath()+theKeyStoreFileName + ") "
 							+ ex.getMessage(),
 					ex);
 			throw new EPPConException(

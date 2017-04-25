@@ -1,9 +1,6 @@
 package com.hihexo.epp.common.base;
 
 /**
- * @author hurd@omeng.cc
- * @version v0.1
- * @date 2016/12/19
  * @desc 基础控制器 添加一些控制方法
  */
 public abstract class BaseController {
