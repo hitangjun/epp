@@ -208,8 +208,7 @@ public class BaseNSController extends BaseController {
         }
 
         logger.debug("Start of " + aTest);
-        System.out
-                .println("****************************************************************\n");
+        logger.debug("****************************************************************\n");
     }
 
     /**
@@ -220,8 +219,7 @@ public class BaseNSController extends BaseController {
      *            name for the test
      */
     public static void printEnd(String aTest) {
-        System.out
-                .println("****************************************************************");
+        logger.debug("****************************************************************");
 
         if (Thread.currentThread() instanceof TestThread) {
             System.out.print(Thread.currentThread().getName() + ": ");
@@ -264,6 +262,30 @@ public class BaseNSController extends BaseController {
      */
     public String makeContactName() {
         return new String("Contact Name xx");
+    }
+
+    /**
+     * This method generates a unique internal Host Name.
+     *
+     * @return Unique internal host name
+     */
+    public String makeInternalHost() {
+        long tm = System.currentTimeMillis();
+
+        return new String(String.valueOf(tm + "xx").substring(10)
+                + "." + this.makeDomainName());
+    }
+
+    /**
+     * This method generates a unique internal Host Name.
+     *
+     * @return Unique internal host name
+     */
+    public String makeExternalHost() {
+        long tm = System.currentTimeMillis();
+
+        return new String(String.valueOf(tm + "XX").substring(10)
+                + "." + this.makeDomainName());
     }
 
     /**

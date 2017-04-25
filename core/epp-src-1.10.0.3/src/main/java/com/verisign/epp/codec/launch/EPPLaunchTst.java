@@ -18,68 +18,27 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 package com.verisign.epp.codec.launch;
 
 // JUNIT Imports
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.cert.CertStore;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateFactory;
-import java.security.cert.CollectionCertStoreParameters;
-import java.security.cert.PKIXParameters;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.List;
-import java.util.Vector;
-
-import junit.framework.Assert;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-
-import org.apache.commons.codec.binary.Base64;
-
-import com.verisign.epp.codec.domain.EPPDomainAddRemove;
-import com.verisign.epp.codec.domain.EPPDomainCheckCmd;
-import com.verisign.epp.codec.domain.EPPDomainContact;
-import com.verisign.epp.codec.domain.EPPDomainCreateCmd;
-import com.verisign.epp.codec.domain.EPPDomainCreateResp;
-import com.verisign.epp.codec.domain.EPPDomainDeleteCmd;
-import com.verisign.epp.codec.domain.EPPDomainInfoCmd;
-import com.verisign.epp.codec.domain.EPPDomainInfoResp;
-import com.verisign.epp.codec.domain.EPPDomainMapFactory;
-import com.verisign.epp.codec.domain.EPPDomainUpdateCmd;
-import com.verisign.epp.codec.gen.EPPAuthInfo;
-import com.verisign.epp.codec.gen.EPPCodecException;
-import com.verisign.epp.codec.gen.EPPCodecTst;
-import com.verisign.epp.codec.gen.EPPDecodeException;
-import com.verisign.epp.codec.gen.EPPEncodeDecodeStats;
-import com.verisign.epp.codec.gen.EPPEncodeException;
-import com.verisign.epp.codec.gen.EPPFactory;
-import com.verisign.epp.codec.gen.EPPResponse;
-import com.verisign.epp.codec.gen.EPPResult;
-import com.verisign.epp.codec.gen.EPPTransId;
-import com.verisign.epp.codec.gen.EPPUtil;
-import com.verisign.epp.codec.mark.EPPCourt;
-import com.verisign.epp.codec.mark.EPPMark;
-import com.verisign.epp.codec.mark.EPPMarkAddress;
-import com.verisign.epp.codec.mark.EPPMarkContact;
-import com.verisign.epp.codec.mark.EPPProtection;
-import com.verisign.epp.codec.mark.EPPTrademark;
-import com.verisign.epp.codec.mark.EPPTreatyOrStatute;
+import com.verisign.epp.codec.domain.*;
+import com.verisign.epp.codec.gen.*;
+import com.verisign.epp.codec.mark.*;
 import com.verisign.epp.codec.signedMark.EPPEncodedSignedMark;
 import com.verisign.epp.codec.signedMark.EPPIssuer;
 import com.verisign.epp.codec.signedMark.EPPSignedMark;
 import com.verisign.epp.codec.signedMark.SMDRevocationList;
 import com.verisign.epp.exception.EPPException;
 import com.verisign.epp.util.TestThread;
+import junit.framework.Assert;
+import junit.framework.Test;
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+import org.apache.commons.codec.binary.Base64;
+
+import java.io.*;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.cert.*;
+import java.util.*;
 
 /**
  * Is a unit test of the com.verisign.epp.codec.launch package. The unit test
@@ -2000,8 +1959,8 @@ public class EPPLaunchTst extends TestCase {
 		try {
 			List<String> crls = new ArrayList<String>();
 
-			crls.add("eppsdk.crl");
-			crls.add("tmch-pilot.crl");
+			crls.add("/mnt/epp/eppsdk.crl");
+			crls.add("/mnt/epp/tmch-pilot.crl");
 
 			pkixParameters = loadPKIXParameters(TRUSTSTORE_FILENAME, crls);
 		}

@@ -40,7 +40,7 @@ public class Swagger2Config extends WebMvcConfigurationSupport {
 
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
-                .title("Spring 中使用Swagger2构建RESTful APIs")
+                .title("APIs DOC")
                 .termsOfServiceUrl("https://www.hihexo.com")
                 .version("1.0")
                 .build();

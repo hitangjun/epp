@@ -2515,8 +2515,8 @@ public class EPPLaunchTst extends TestCase {
 		try {
 			List<String> crls = new ArrayList<String>();
 
-			crls.add("eppsdk.crl");
-			crls.add("tmch-pilot.crl");
+			crls.add("/mnt/epp/eppsdk.crl");
+			crls.add("/mnt/epp/tmch-pilot.crl");
 
 			pkixParameters = com.verisign.epp.codec.launch.EPPLaunchTst
 					.loadPKIXParameters("signedMarkTrust.jks", crls);

@@ -27,7 +27,7 @@ http://www.verisign.com/nds/naming/namestore/techdocs.html
 			Direct diagnostic logging to a rolling log file prefixed with epp.log.
 		-->
         <appender name="DATEFILE" class="org.apache.log4j.DailyRollingFileAppender">
-			<param 	name="File" value="logs/epp.log" />
+			<param 	name="File" value="/mnt/logs/epp/epp.log" />
 			<param 	name="DatePattern" value="yyyyMMdd" />
 			<layout class="org.apache.log4j.PatternLayout">
 				<param 	name="ConversionPattern"
@@ -36,7 +36,7 @@ http://www.verisign.com/nds/naming/namestore/techdocs.html
         </appender>
         
        <appender name="PACKETFILE" class="org.apache.log4j.DailyRollingFileAppender">
-			<param 	name="File" value="logs/epp-packet.log" />
+			<param 	name="File" value="/mnt/logs/epp/epp-packet.log" />
 			<param 	name="DatePattern" value="yyyyMMdd" />
 			<layout class="org.apache.log4j.PatternLayout">
 				<param 	name="ConversionPattern"
@@ -50,7 +50,7 @@ http://www.verisign.com/nds/naming/namestore/techdocs.html
 			Direct warning and errors to a rolling error log prefixed with epp.err.
 		-->
         <appender name="ERROR" class="org.apache.log4j.DailyRollingFileAppender">
-			<param 	name="File" value="logs/epp.err" />
+			<param 	name="File" value="/mnt/logs/epp/epp.err" />
 			<param 	name="DatePattern" value="yyyyMMdd" />
 			<layout class="org.apache.log4j.PatternLayout">
 				<param 	name="ConversionPattern"

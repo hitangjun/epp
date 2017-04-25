@@ -19,85 +19,31 @@
  ***********************************************************/
 package com.hihexo.epp.controller;
 
-//----------------------------------------------
-//
-// imports...
-//
-//----------------------------------------------
-// Java Core Imports
-
 import com.verisign.epp.codec.contact.*;
 import com.verisign.epp.codec.gen.EPPResponse;
-import com.verisign.epp.codec.gen.EPPResult;
 import com.verisign.epp.codec.resellerext.EPPResellerExtUpdate.Action;
-import com.verisign.epp.interfaces.EPPApplicationSingle;
 import com.verisign.epp.interfaces.EPPCommandException;
 import com.verisign.epp.interfaces.EPPContact;
 import com.verisign.epp.interfaces.EPPSession;
 import com.verisign.epp.namestore.interfaces.NSContact;
 import com.verisign.epp.namestore.interfaces.NSSubProduct;
-import com.verisign.epp.pool.EPPSessionPool;
-import com.verisign.epp.util.EPPCatFactory;
 import com.verisign.epp.util.InvalidateSessionException;
-import com.verisign.epp.util.TestThread;
 import com.verisign.epp.util.TestUtil;
-import junit.extensions.TestSetup;
-import junit.framework.Assert;
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import org.apache.log4j.Logger;
 
-import java.util.Random;
 import java.util.Vector;
 
 /**
- * Test of the use of the <code>NSContact</code> interface. This test utilizes
+ * <code>NSContact</code> interface. This test utilizes
  * the EPP session pool and exercises all of the operations defined in
  * <code>NSContact</code> and the base class <code>EPPContact</code>.
  * 
  * @see NSContact
  * @see EPPContact
  */
-public class NSContactTst extends TestCase {
+public class NSContactController extends BaseNSController{
 
 	/**
-	 * Handle to the Singleton EPP Application instance (
-	 * <code>EPPApplicationSingle</code>)
-	 */
-	private static EPPApplicationSingle app = EPPApplicationSingle
-			.getInstance();
-
-	/** Name of configuration file to use for test (default = epp.config). */
-	private static String configFileName = "epp.config";
-
-	/** Logging category */
-	private static final Logger cat = Logger.getLogger(com.verisign.epp.namestore.interfaces.NSContactTst.class
-			.getName(), EPPCatFactory.getInstance().getFactory());
-
-	/** EPP Session pool associated with test */
-	private static EPPSessionPool sessionPool = null;
-
-	/**
-	 * Random instance for the generation of unique objects (contacts, IP
-	 * addresses, etc.).
-	 */
-	private Random rd = new Random(System.currentTimeMillis());
-
-	/**
-	 * Allocates an <code>NSContactTst</code> with a logical name. The
-	 * constructor will initialize the base class <code>TestCase</code> with the
-	 * logical name.
-	 *
-	 * @param name
-	 *            Logical name of the test
-	 */
-	public NSContactTst(String name) {
-		super(name);
-	}
-
-	/**
-	 * Unit test of <code>NSContact.sendCreate</code> command.
+	 * <code>NSContact.sendCreate</code> command.
 	 */
 	public void testContactCreate() {
 		printStart("testContactCreate");
@@ -228,7 +174,7 @@ public class NSContactTst extends TestCase {
 	}
 
 	/**
-	 * Unit test of <code>NSContact.sendContactCheck</code> command.
+	 * <code>NSContact.sendContactCheck</code> command.
 	 */
 	public void testContactCheck() {
 		printStart("testContactCheck");
@@ -349,7 +295,7 @@ public class NSContactTst extends TestCase {
 	}
 
 	/**
-	 * Unit test of <code>NSContact.sendContactInfo</code> command.
+	 * <code>NSContact.sendContactInfo</code> command.
 	 */
 	public void testContactInfo() {
 		printStart("testContactInfo");
@@ -519,7 +465,7 @@ public class NSContactTst extends TestCase {
 	}
 
 	/**
-	 * Unit test of <code>NSContact.sendDelete</code> command.
+	 * <code>NSContact.sendDelete</code> command.
 	 */
 	public void testContactDelete() {
 		printStart("testContactDelete");
@@ -566,7 +512,7 @@ public class NSContactTst extends TestCase {
 	}
 
 	/**
-	 * Unit test of <code>NSContact.sendUpdate</code> command.
+	 * <code>NSContact.sendUpdate</code> command.
 	 */
 	public void testContactUpdate() {
 		printStart("testContactUpdate");
@@ -878,297 +824,4 @@ public class NSContactTst extends TestCase {
 		printEnd("testResellerId");
 	}
 
-	/**
-	 * Unit test of <code>EPPSession.endSession</code>. One session in the
-	 * session pool wil be ended.
-	 */
-	public void testEndSession() {
-		printStart("testEndSession");
-
-		EPPSession theSession = null;
-		try {
-			theSession = this.borrowSession();
-			sessionPool.invalidateObject(theSession);
-			theSession = null;
-		}
-		catch (Exception ex) {
-			ex.printStackTrace();
-			Assert.fail("testEndSession(): Exception invalidating session: "
-					+ ex);
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("testEndSession");
-	}
-
-	/**
-	 * JUNIT <code>setUp</code> method
-	 */
-	protected void setUp() {
-
-	}
-
-	/**
-	 * JUNIT <code>tearDown</code>, which currently does nothing.
-	 */
-	protected void tearDown() {
-	}
-
-	/**
-	 * JUNIT <code>suite</code> static method, which returns the tests
-	 * associated with <code>NSContactTst</code>.
-	 * 
-	 * @return Test suite
-	 */
-	public static Test suite() {
-		return new NSContactTstSetup(new TestSuite(com.verisign.epp.namestore.interfaces.NSContactTst.class));
-	}
-
-	/**
-	 * Setup framework from running NSContactTst tests.
-	 */
-	private static class NSContactTstSetup extends TestSetup {
-
-		/**
-		 * Creates setup instance for passed in tests.
-		 * 
-		 * @param aTest
-		 *            Tests to execute
-		 */
-		public NSContactTstSetup(Test aTest) {
-			super(aTest);
-		}
-
-		/**
-		 * Setup framework for running NSContactTst tests.
-		 */
-		protected void setUp() throws Exception {
-			super.setUp();
-
-			String theConfigFileName = System.getProperty("EPP.ConfigFile");
-			if (theConfigFileName != null)
-				configFileName = theConfigFileName;
-
-			try {
-				app.initialize(configFileName);
-			}
-			catch (EPPCommandException e) {
-				e.printStackTrace();
-				Assert.fail("Error initializing the EPP Application: " + e);
-			}
-
-			// Initialize the session pool
-			try {
-				sessionPool = EPPSessionPool.getInstance();
-				sessionPool.init();
-			}
-			catch (Exception ex) {
-				ex.printStackTrace();
-				Assert.fail("Error initializing the session pool: " + ex);
-			}
-
-		}
-
-		/**
-		 * Tear down framework from running NSContactTst tests.
-		 */
-		protected void tearDown() throws Exception {
-			super.tearDown();
-			EPPSessionPool.getInstance().close();
-		}
-	}
-
-	/**
-	 * Unit test main, which accepts the following system property options: <br>
-	 * 
-	 * <ul>
-	 * <li>iterations Number of unit test iterations to run</li>
-	 * <li>validate Turn XML validation on (<code>true</code>) or off (
-	 * <code>false</code>). If validate is not specified, validation will be
-	 * off.</li>
-	 * </ul>
-	 * 
-	 * 
-	 * @param args
-	 *            DOCUMENT ME!
-	 */
-	public static void main(String[] args) {
-		// Override the default configuration file name?
-		if (args.length > 0) {
-			configFileName = args[0];
-		}
-
-		// Number of Threads
-		int numThreads = 1;
-		String threadsStr = System.getProperty("threads");
-
-		if (threadsStr != null) {
-			numThreads = Integer.parseInt(threadsStr);
-		}
-
-		// Run test suite in multiple threads?
-		if (numThreads > 1) {
-			// Spawn each thread passing in the Test Suite
-			for (int i = 0; i < numThreads; i++) {
-				TestThread thread = new TestThread("NSContactTst Thread " + i,
-						com.verisign.epp.namestore.interfaces.NSContactTst.suite());
-				thread.start();
-			}
-		}
-		else { // Single threaded mode.
-			junit.textui.TestRunner.run(com.verisign.epp.namestore.interfaces.NSContactTst.suite());
-		}
-
-		try {
-			app.endApplication();
-		}
-		catch (EPPCommandException e) {
-			e.printStackTrace();
-			Assert.fail("Error ending the EPP Application: " + e);
-		}
-	}
-
-	/**
-	 * Print the start of a test with the <code>Thread</code> name if the
-	 * current thread is a <code>TestThread</code>.
-	 * 
-	 * @param aTest
-	 *            name for the test
-	 */
-	public static void printStart(String aTest) {
-		if (Thread.currentThread() instanceof TestThread) {
-			System.out.print(Thread.currentThread().getName() + ": ");
-			cat.info(Thread.currentThread().getName() + ": " + aTest + " Start");
-		}
-
-		System.out.println("Start of " + aTest);
-		System.out
-				.println("****************************************************************\n");
-	}
-
-	/**
-	 * Print the end of a test with the <code>Thread</code> name if the current
-	 * thread is a <code>TestThread</code>.
-	 * 
-	 * @param aTest
-	 *            name for the test
-	 */
-	public static void printEnd(String aTest) {
-		System.out
-				.println("****************************************************************");
-
-		if (Thread.currentThread() instanceof TestThread) {
-			System.out.print(Thread.currentThread().getName() + ": ");
-			cat.info(Thread.currentThread().getName() + ": " + aTest + " End");
-		}
-
-		System.out.println("End of " + aTest);
-		System.out.println("\n");
-	}
-
-	/**
-	 * Utility method to borrow a session from the session pool. All exceptions
-	 * will result in the test failing. This method should only be used for
-	 * positive session pool tests.
-	 * 
-	 * @return Session from the session pool
-	 */
-	private EPPSession borrowSession() {
-		EPPSession theSession = null;
-		try {
-			theSession = sessionPool.borrowObject();
-		}
-		catch (Exception ex) {
-			ex.printStackTrace();
-			Assert.fail("borrowSession(): Exception borrowing session: " + ex);
-		}
-
-		return theSession;
-	}
-
-	/**
-	 * Utility method to return a session to the session pool. This should be
-	 * placed in a finally block. All exceptions will result in the test
-	 * failing.
-	 * 
-	 * @param aSession
-	 *            Session to return to the pool
-	 */
-	private void returnSession(EPPSession aSession) {
-		try {
-			if (aSession != null)
-				sessionPool.returnObject(aSession);
-		}
-		catch (Exception ex) {
-			ex.printStackTrace();
-			Assert.fail("returnSession(): Exception returning session: " + ex);
-		}
-	}
-
-	/**
-	 * Utility method to invalidate a session in the session pool. This should
-	 * be placed in an exception block.
-	 * 
-	 * @param aSession
-	 *            Session to invalidate in the pool
-	 */
-	private void invalidateSession(EPPSession aSession) {
-		try {
-			if (aSession != null)
-				sessionPool.invalidateObject(aSession);
-		}
-		catch (Exception ex) {
-			ex.printStackTrace();
-			Assert.fail("invalidateSession(): Exception invalidating session: "
-					+ ex);
-		}
-	}
-
-	/**
-	 * Handle a response by printing out the result details.
-	 * 
-	 * @param aResponse
-	 *            the response to handle
-	 */
-	private void handleResponse(EPPResponse aResponse) {
-
-		for (int i = 0; i < aResponse.getResults().size(); i++) {
-			EPPResult theResult = (EPPResult) aResponse.getResults().elementAt(
-					i);
-
-			System.out.println("Result Code    : " + theResult.getCode());
-			System.out.println("Result Message : " + theResult.getMessage());
-			System.out.println("Result Lang    : " + theResult.getLang());
-
-			if (theResult.isSuccess()) {
-				System.out.println("Command Passed ");
-			}
-			else {
-				System.out.println("Command Failed ");
-			}
-
-			if (theResult.getAllValues() != null) {
-				for (int k = 0; k < theResult.getAllValues().size(); k++) {
-					System.out.println("Result Values  : "
-							+ theResult.getAllValues().elementAt(k));
-				}
-			}
-		}
-	} // End handleResponse(EPPResponse)
-
-	/**
-	 * This method generates a unique Contact Name.
-	 * 
-	 * @return Unique contact name
-	 */
-	public String makeContactName() {
-		long tm = System.currentTimeMillis();
-
-		return new String("Con"
-				+ String.valueOf(tm + rd.nextInt(5)).substring(7));
-	}
-
-} // End class NSContactTst
+} // End class NSContactController
