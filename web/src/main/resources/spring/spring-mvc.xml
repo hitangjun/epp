@@ -64,6 +64,10 @@
             <mvc:mapping path="/**"/>
             <mvc:exclude-mapping path="/error/**"/>
             <mvc:exclude-mapping path="/static/**"/>
+            <mvc:exclude-mapping path="/v2/**"/>
+            <mvc:exclude-mapping path="/configuration/**"/>
+            <mvc:exclude-mapping path="/swagger*/**"/>
+            <mvc:exclude-mapping path="*.html"/>
             <bean class="com.hihexo.epp.common.interceptor.RequestInterceptor"/>
         </mvc:interceptor>
     </mvc:interceptors>

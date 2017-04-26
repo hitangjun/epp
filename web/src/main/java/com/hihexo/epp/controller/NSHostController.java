@@ -40,6 +40,8 @@ import com.verisign.epp.namestore.interfaces.NSHost;
 import com.verisign.epp.util.InvalidateSessionException;
 import com.verisign.epp.util.TestUtil;
 
+import javax.servlet.http.HttpServletRequest;
+
 // Log4j imports
 // EPP Imports
 
@@ -56,9 +58,9 @@ public class NSHostController extends BaseNSController{
 	// End NSHostController(String)
 
 	/**
-	 * Unit test of <code>NSHost.sendCreate</code> command.
+	 * <code>NSHost.sendCreate</code> command.
 	 */
-	public void testHostCreate() {
+	public void doHostCreate(HttpServletRequest request) {
 		printStart("testHostCreate");
 
 		EPPSession theSession = null;
@@ -77,7 +79,7 @@ public class NSHostController extends BaseNSController{
 				System.out
 						.println("hostCreate: Create internal " + theHostName);
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				theHost.addHostName(theHostName);
 				theHost.setSubProductID(NSSubProduct.COM);
@@ -102,7 +104,7 @@ public class NSHostController extends BaseNSController{
 				System.out
 						.println("\n----------------------------------------------------------------");
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				String theHostName = this.makeExternalHost();
 
@@ -136,9 +138,9 @@ public class NSHostController extends BaseNSController{
 	}
 
 	/**
-	 * Unit test of <code>NSHost.sendHostCheck</code> command.
+	 * <code>NSHost.sendHostCheck</code> command.
 	 */
-	public void testHostCheck() {
+	public void doHostCheck(HttpServletRequest request) {
 		printStart("testHostCheck");
 
 		EPPSession theSession = null;
@@ -156,7 +158,7 @@ public class NSHostController extends BaseNSController{
 				System.out.println("hostCheck: Check single host name ("
 						+ theHostName + ")");
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				theHost.addHostName(theHostName);
 				theHost.setSubProductID(NSSubProduct.COM);
@@ -202,7 +204,7 @@ public class NSHostController extends BaseNSController{
 						.println("\n----------------------------------------------------------------");
 				System.out
 						.println("hostCheck: Check multiple host names (ns1.example.com, ns2.example.com, ns3.example.com)");
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				/**
 				 * Add ns(1-3).example.com
@@ -261,9 +263,9 @@ public class NSHostController extends BaseNSController{
 	}
 
 	/**
-	 * Unit test of <code>NSHost.sendHostInfo</code> command.
+	 * <code>NSHost.sendHostInfo</code> command.
 	 */
-	public void testHostInfo() {
+	public void doHostInfo(HttpServletRequest request) {
 		printStart("testHostInfo");
 
 		EPPSession theSession = null;
@@ -275,7 +277,7 @@ public class NSHostController extends BaseNSController{
 			try {
 				System.out.println("\nhostInfo: Host info");
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				theHost.addHostName(this.makeInternalHost());
 				theHost.setSubProductID(NSSubProduct.COM);
@@ -353,9 +355,9 @@ public class NSHostController extends BaseNSController{
 	}
 
 	/**
-	 * Unit test of <code>NSHost.sendDelete</code> command.
+	 * <code>NSHost.sendDelete</code> command.
 	 */
-	public void testHostDelete() {
+	public void doHostDelete(HttpServletRequest request) {
 		printStart("testHostDelete");
 
 		EPPSession theSession = null;
@@ -367,7 +369,7 @@ public class NSHostController extends BaseNSController{
 			try {
 				System.out.println("\nhostDelete: Host delete");
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				theHost.addHostName(this.makeInternalHost());
 				theHost.setSubProductID(NSSubProduct.COM);
@@ -400,9 +402,9 @@ public class NSHostController extends BaseNSController{
 	}
 
 	/**
-	 * Unit test of <code>NSHost.sendUpdate</code> command.
+	 * <code>NSHost.sendUpdate</code> command.
 	 */
-	public void testHostUpdate() {
+	public void doHostUpdate(HttpServletRequest request) {
 		printStart("testHostUpdate");
 
 		EPPSession theSession = null;
@@ -413,7 +415,7 @@ public class NSHostController extends BaseNSController{
 
 			try {
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				String theHostName = this.makeInternalHost();
 
@@ -468,7 +470,7 @@ public class NSHostController extends BaseNSController{
 	 * {@link com.verisign.epp.namestore.interfaces.NSHost#updateResellerId(Action, String)}
 	 * to update the reseller identifier of an existing host.
 	 */
-	public void testResellerId() {
+	public void doResellerId(HttpServletRequest request) {
 		printStart("testResellerId");
 
 		EPPSession theSession = null;
@@ -509,7 +511,7 @@ public class NSHostController extends BaseNSController{
 				System.out
 						.println("\ntestResellerId: Host update with reseller identifier - ADD");
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				theHost.addHostName("example1.tld");
 				theHost.setSubProductID("tld");
@@ -533,7 +535,7 @@ public class NSHostController extends BaseNSController{
 				System.out
 						.println("\ntestResellerId: Host update with reseller identifier - CHG");
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				theHost.addHostName("example1.tld");
 				theHost.setSubProductID("tld");
@@ -557,7 +559,7 @@ public class NSHostController extends BaseNSController{
 				System.out
 						.println("\ntestResellerId: Host update with reseller identifier - REM");
 
-				theHost.setTransId("ABC-12345-XYZ");
+				theHost.setTransId(getClientTransId(request));
 
 				theHost.addHostName("example1.tld");
 				theHost.setSubProductID("tld");
