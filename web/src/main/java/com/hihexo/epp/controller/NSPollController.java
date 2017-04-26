@@ -32,6 +32,7 @@ import com.verisign.epp.interfaces.EPPSession;
 import com.verisign.epp.namestore.interfaces.NSDomain;
 import com.verisign.epp.util.InvalidateSessionException;
 import com.verisign.epp.util.TestUtil;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,7 +52,7 @@ import javax.servlet.http.HttpServletRequest;
 @Controller
 @RequestMapping("/poll")
 public class NSPollController extends BaseNSController {
-
+	private static org.slf4j.Logger logger = LoggerFactory.getLogger(NSPollController.class);
 	@RequestMapping(value = "/send", method= RequestMethod.POST)
 	@SystemControllerLog(description = "pollmessage")
 	@ResponseBody

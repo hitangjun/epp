@@ -1,6 +1,8 @@
 package com.hihexo.epp.controller;
 
 import com.hihexo.epp.common.base.BaseController;
+import com.hihexo.epp.common.util.Constants;
+import com.hihexo.epp.model.BaseParam;
 import com.verisign.epp.codec.domain.EPPDomainInfoResp;
 import com.verisign.epp.codec.gen.EPPResponse;
 import com.verisign.epp.codec.gen.EPPResult;
@@ -19,10 +21,13 @@ import org.apache.log4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.List;
 
+
 public class BaseNSController extends BaseController {
-    public static org.slf4j.Logger logger = LoggerFactory.getLogger(BaseNSController.class);
+    private static org.slf4j.Logger logger = LoggerFactory.getLogger(BaseNSController.class);
+    protected HashMap<String,Object> resultMap = new HashMap<String,Object>();
     /**
      * Handle to the Singleton EPP Application instance (
      * <code>EPPApplicationSingle</code>)
@@ -31,7 +36,7 @@ public class BaseNSController extends BaseController {
             .getInstance();
 
     /** Name of configuration file to use for test (default = epp.config). */
-    private static String configFileName = "epp.config";
+    private static String configFileName = "epp.properties";
 
     /** Logging category */
     private static final Logger cat = Logger.getLogger(NSDomainTst.class
@@ -75,11 +80,12 @@ public class BaseNSController extends BaseController {
     }
 
     protected String getClientTransId(HttpServletRequest request){
-        return "ABC-12345-XYZ"; //FIXME
+        Object transId = request.getAttribute(Constants.TARNS_ID);
+        return null == transId ? ""+System.currentTimeMillis() : ""+transId;
     }
 
-    protected String getAuthString(){
-        return "ClientX"; //FIXME
+    protected String getAuthString(BaseParam base){
+        return base.getAuthStr();
     }
 
     /**

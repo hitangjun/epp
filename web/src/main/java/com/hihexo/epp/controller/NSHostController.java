@@ -26,12 +26,12 @@ package com.hihexo.epp.controller;
 //----------------------------------------------
 // Java Core Imports
 
+import com.hihexo.epp.common.aspect.SystemControllerLog;
+import com.hihexo.epp.model.NSHostParam;
+import com.hihexo.epp.model.NSHostUpdateParam;
 import com.hihexo.epp.namestore.interfaces.NSSubProduct;
 import com.verisign.epp.codec.gen.EPPResponse;
-import com.verisign.epp.codec.host.EPPHostAddress;
-import com.verisign.epp.codec.host.EPPHostCheckResp;
-import com.verisign.epp.codec.host.EPPHostCheckResult;
-import com.verisign.epp.codec.host.EPPHostInfoResp;
+import com.verisign.epp.codec.host.*;
 import com.verisign.epp.codec.resellerext.EPPResellerExtUpdate.Action;
 import com.verisign.epp.interfaces.EPPCommandException;
 import com.verisign.epp.interfaces.EPPHost;
@@ -39,91 +39,154 @@ import com.verisign.epp.interfaces.EPPSession;
 import com.verisign.epp.namestore.interfaces.NSHost;
 import com.verisign.epp.util.InvalidateSessionException;
 import com.verisign.epp.util.TestUtil;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 
-// Log4j imports
-// EPP Imports
-
 /**
- * Test of the use of the <code>NSHost</code> interface. This test utilizes the
+ * the <code>NSHost</code> interface. This  utilizes the
  * EPP session pool and exercises all of the operations defined in
  * <code>NSHost</code> and the base class <code>EPPHost</code>.
  * 
  * @see com.verisign.epp.namestore.interfaces.NSHost
  * @see EPPHost
  */
+@Controller
+@RequestMapping("/host")
 public class NSHostController extends BaseNSController{
-
-	// End NSHostController(String)
-
+	private static org.slf4j.Logger logger = LoggerFactory.getLogger(NSHostController.class);
 	/**
 	 * <code>NSHost.sendCreate</code> command.
 	 */
-	public void doHostCreate(HttpServletRequest request) {
-		printStart("testHostCreate");
+	@RequestMapping(value = "/create",method = RequestMethod.POST)
+	@SystemControllerLog(description = "创建HOST")
+	@ResponseBody
+	public Object doHostCreate(HttpServletRequest request, @RequestBody NSHostParam params) {
+		printStart("HostCreate");
 
 		EPPSession theSession = null;
-		EPPResponse theResponse = null;
 
 		try {
 			theSession = this.borrowSession();
 			com.verisign.epp.namestore.interfaces.NSHost theHost = new com.verisign.epp.namestore.interfaces.NSHost(theSession);
 
 			try {
-				System.out
-						.println("\n----------------------------------------------------------------");
-
-				String theHostName = this.makeInternalHost();
-
-				System.out
-						.println("hostCreate: Create internal " + theHostName);
+				logger.debug("\n----------------------------------------------------------------");
+				EPPResponse theResponse = null;
+				String theHostName = params.getInternalHostName();
+				logger.debug("hostCreate: Create internal " + theHostName);
 
 				theHost.setTransId(getClientTransId(request));
-
 				theHost.addHostName(theHostName);
 				theHost.setSubProductID(NSSubProduct.COM);
 
-				theHost.addIPV4Address(this.makeIP());
-				theHost.addIPV6Address("1080:0:0:0:8:800:200C:417A");
-				theHost.addIPV6Address("::FFFF:129.144.52.38");
+				for(String ip4 : params.getIpv4()){
+					theHost.addIPV4Address(ip4);
+				}
+				for(String ip6 : params.getIpv4()){
+					theHost.addIPV6Address(ip6);
+				}
 
 				theResponse = theHost.sendCreate();
-
 				// -- Output all of the response attributes
-				System.out.println("hostCreate: Response = [" + theResponse
+				logger.debug("hostCreate: Response = [" + theResponse
 						+ "]\n\n");
-
+				resultMap.put("internalResp",theResponse);
 			}
-
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
 			}
 
 			try {
-				System.out
-						.println("\n----------------------------------------------------------------");
-
+				EPPResponse theResponse = null;
+				logger.debug("\n----------------------------------------------------------------");
 				theHost.setTransId(getClientTransId(request));
 
-				String theHostName = this.makeExternalHost();
-
-				System.out.println("hostCreate: Create " + theHostName
+				String theHostName = params.getExternalHostName();
+				logger.debug("hostCreate: Create " + theHostName
 						+ " with all optional attributes");
 
 				theHost.addHostName(theHostName);
 				theHost.setSubProductID(NSSubProduct.COM);
-
 				theResponse = theHost.sendCreate();
 
 				// -- Output all of the response attributes
-				System.out.println("hostCreate: Response = [" + theResponse
+				logger.debug("hostCreate: Response = [" + theResponse
 						+ "]\n\n");
+				resultMap.put("externalResp",theResponse);
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
 			}
 
+		}
+		catch (InvalidateSessionException ex) {
+			this.invalidateSession(theSession);
+			theSession = null;
+			return renderError("unknown");
+		}
+		finally {
+			if (theSession != null) {
+				this.returnSession(theSession);
+			}
+		}
+
+		printEnd("HostCreate");
+		return renderSuccess(resultMap);
+	}
+
+	/**
+	 * <code>NSHost.sendHostCheck</code> command.
+	 */
+	@RequestMapping(value = "/check",method = RequestMethod.POST)
+	@SystemControllerLog(description = "核查HOST")
+	@ResponseBody
+	public Object doHostCheck(HttpServletRequest request, @RequestBody NSHostParam params) {
+		printStart("HostCheck");
+
+		EPPSession theSession = null;
+		EPPHostCheckResp theResponse = null;
+		try {
+			theSession = this.borrowSession();
+			com.verisign.epp.namestore.interfaces.NSHost theHost = new com.verisign.epp.namestore.interfaces.NSHost(theSession);
+
+			try {
+
+				logger.debug("\n----------------------------------------------------------------");
+
+				String theHostName = params.getInternalHostName();
+				logger.debug("hostCheck: Check single host name ("
+						+ theHostName + ")");
+
+				theHost.setTransId(getClientTransId(request));
+
+				theHost.addHostName(theHostName);
+				theHost.setSubProductID(NSSubProduct.COM);
+
+				theResponse = theHost.sendCheck();
+
+				logger.debug("Response Type = " + theResponse.getType());
+				logger.debug("Response.TransId.ServerTransId = "
+						+ theResponse.getTransId().getServerTransId());
+				logger.debug("Response.TransId.ServerTransId = "
+						+ theResponse.getTransId().getClientTransId());
+				// Output all of the response attributes
+				logger.debug("\nhostCheck: Response = [" + theResponse
+						+ "]");
+
+				// For each result
+				getHostCheckResult(theResponse);
+				this.handleResponse(theResponse);
+				return renderSuccess(theResponse);
+			}
+			catch (Exception e) {
+				TestUtil.handleException(theSession, e);
+			}
 		}
 		catch (InvalidateSessionException ex) {
 			this.invalidateSession(theSession);
@@ -134,14 +197,18 @@ public class NSHostController extends BaseNSController{
 				this.returnSession(theSession);
 		}
 
-		printEnd("testHostCreate");
+		printEnd("HostCheck");
+		return renderError("unknown");
 	}
 
 	/**
 	 * <code>NSHost.sendHostCheck</code> command.
 	 */
-	public void doHostCheck(HttpServletRequest request) {
-		printStart("testHostCheck");
+	@RequestMapping(value = "/checkmulti",method = RequestMethod.POST)
+	@SystemControllerLog(description = "核查HOST")
+	@ResponseBody
+	public Object doHostCheckMulti(HttpServletRequest request, @RequestBody NSHostParam params) {
+		printStart("HostCheckMulti");
 
 		EPPSession theSession = null;
 		EPPHostCheckResp theResponse = null;
@@ -150,100 +217,31 @@ public class NSHostController extends BaseNSController{
 			com.verisign.epp.namestore.interfaces.NSHost theHost = new com.verisign.epp.namestore.interfaces.NSHost(theSession);
 
 			try {
-
-				System.out
-						.println("\n----------------------------------------------------------------");
-
-				String theHostName = this.makeInternalHost();
-				System.out.println("hostCheck: Check single host name ("
-						+ theHostName + ")");
-
-				theHost.setTransId(getClientTransId(request));
-
-				theHost.addHostName(theHostName);
-				theHost.setSubProductID(NSSubProduct.COM);
-
-				theResponse = theHost.sendCheck();
-
-				System.out.println("Response Type = " + theResponse.getType());
-
-				System.out.println("Response.TransId.ServerTransId = "
-						+ theResponse.getTransId().getServerTransId());
-
-				System.out.println("Response.TransId.ServerTransId = "
-						+ theResponse.getTransId().getClientTransId());
-
-				// Output all of the response attributes
-				System.out.println("\nhostCheck: Response = [" + theResponse
-						+ "]");
-
-				// For each result
-				for (int i = 0; i < theResponse.getCheckResults().size(); i++) {
-					EPPHostCheckResult currResult = (EPPHostCheckResult) theResponse
-							.getCheckResults().elementAt(i);
-
-					if (currResult.isAvailable()) {
-						System.out.println("hostCheck: Host "
-								+ currResult.getName() + " is available");
-					}
-					else {
-						System.out.println("hostCheck: Host "
-								+ currResult.getName() + " is not available");
-					}
-				}
-
-				this.handleResponse(theResponse);
-			}
-			catch (Exception e) {
-				TestUtil.handleException(theSession, e);
-			}
-
-			try {
 				// Check multiple host names
-				System.out
-						.println("\n----------------------------------------------------------------");
-				System.out
-						.println("hostCheck: Check multiple host names (ns1.example.com, ns2.example.com, ns3.example.com)");
+				logger.debug("\n----------------------------------------------------------------");
+				logger.debug("hostCheck: Check multiple host names ");
 				theHost.setTransId(getClientTransId(request));
 
-				/**
-				 * Add ns(1-3).example.com
-				 */
-				theHost.addHostName("ns1.example.com");
-				theHost.addHostName("ns2.example.com");
-				theHost.addHostName("ns3.example.com");
-				theHost.setSubProductID(NSSubProduct.COM);
-
-				for (int i = 0; i <= 10; i++) {
-					theHost.addHostName(this.makeInternalHost());
+				for(String host:params.getMultiHost()){
+					theHost.addHostName(host);
 				}
+				theHost.setSubProductID(NSSubProduct.COM);
 
 				theResponse = theHost.sendCheck();
 
 				// Output all of the response attributes
-				System.out.println("\nhostCheck: Response = [" + theResponse
+				logger.debug("\nhostCheck: Response = [" + theResponse
 						+ "]");
-				System.out.println("Client Transaction Id = "
+				logger.debug("Client Transaction Id = "
 						+ theResponse.getTransId().getClientTransId());
-				System.out.println("Server Transaction Id = "
+				logger.debug("Server Transaction Id = "
 						+ theResponse.getTransId().getServerTransId());
 
 				// For each result
-				for (int i = 0; i < theResponse.getCheckResults().size(); i++) {
-					EPPHostCheckResult currResult = (EPPHostCheckResult) theResponse
-							.getCheckResults().elementAt(i);
-
-					if (currResult.isAvailable()) {
-						System.out.println("hostCheck: Host "
-								+ currResult.getName() + " is available");
-					}
-					else {
-						System.out.println("hostCheck: Host "
-								+ currResult.getName() + " is not available");
-					}
-				}
-
+				getHostCheckResult(theResponse);
 				this.handleResponse(theResponse);
+				
+				return renderSuccess(theResponse);
 			}
 			catch (EPPCommandException e) {
 				TestUtil.handleException(theSession, e);
@@ -259,14 +257,36 @@ public class NSHostController extends BaseNSController{
 				this.returnSession(theSession);
 		}
 
-		printEnd("testHostCheck");
+		printEnd("HostCheck");
+		return renderError("unknown");
 	}
+
+	private void getHostCheckResult(EPPHostCheckResp theResponse) {
+		for (int i = 0; i < theResponse.getCheckResults().size(); i++) {
+            EPPHostCheckResult currResult = (EPPHostCheckResult) theResponse
+                    .getCheckResults().elementAt(i);
+
+            if (currResult.isAvailable()) {
+                logger.debug("hostCheck: Host "
+                        + currResult.getName() + " is available");
+            }
+            else {
+                logger.debug("hostCheck: Host "
+                        + currResult.getName() + " is not available");
+            }
+        }
+	}
+
+
 
 	/**
 	 * <code>NSHost.sendHostInfo</code> command.
 	 */
-	public void doHostInfo(HttpServletRequest request) {
-		printStart("testHostInfo");
+	@RequestMapping(value = "/info",method = RequestMethod.POST)
+	@SystemControllerLog(description = "查询HOST")
+	@ResponseBody
+	public Object doHostInfo(HttpServletRequest request, @RequestBody NSHostParam params) {
+		printStart("HostInfo");
 
 		EPPSession theSession = null;
 		EPPHostInfoResp theResponse = null;
@@ -275,67 +295,46 @@ public class NSHostController extends BaseNSController{
 			com.verisign.epp.namestore.interfaces.NSHost theHost = new com.verisign.epp.namestore.interfaces.NSHost(theSession);
 
 			try {
-				System.out.println("\nhostInfo: Host info");
+				logger.debug("\nhostInfo: Host info");
 
 				theHost.setTransId(getClientTransId(request));
 
-				theHost.addHostName(this.makeInternalHost());
+				theHost.addHostName(params.getInternalHostName());
 				theHost.setSubProductID(NSSubProduct.COM);
 
 				theResponse = theHost.sendInfo();
 
 				// -- Output all of the response attributes
-				System.out.println("hostInfo: Response = [" + theResponse
+				logger.debug("hostInfo: Response = [" + theResponse
 						+ "]\n\n");
 
 				// -- Output required response attributes using accessors
-				System.out.println("hostInfo: name = " + theResponse.getName());
-				System.out.println("hostInfo: client id = "
+				logger.debug("hostInfo: name = " + theResponse.getName());
+				logger.debug("hostInfo: client id = "
 						+ theResponse.getClientId());
-				System.out.println("hostInfo: created by = "
+				logger.debug("hostInfo: created by = "
 						+ theResponse.getCreatedBy());
-				System.out.println("hostInfo: create date = "
+				logger.debug("hostInfo: create date = "
 						+ theResponse.getCreatedDate());
 
 				// -- Output optional response attributes using accessors
 				// Addresses
-				if (theResponse.getAddresses() != null) {
-					// For each Address
-					for (int i = 0; i < theResponse.getAddresses().size(); i++) {
-						EPPHostAddress currAddress = (EPPHostAddress) theResponse
-								.getAddresses().elementAt(i);
-
-						System.out.print("hostInfo: address " + (i + 1));
-
-						// Address Name
-						System.out.print(" name = " + currAddress.getName());
-
-						// IPV4 Address?
-						if (currAddress.getType() == EPPHostAddress.IPV4) {
-							System.out.println(", type = IPV4");
-						}
-
-						// IPV6 Address?
-						else if (currAddress.getType() == EPPHostAddress.IPV4) {
-							System.out.println(", type = IPV6");
-						}
-					}
-				}
+				getHostAddress(theResponse);
 
 				// Last Updated By
 				if (theResponse.getLastUpdatedBy() != null) {
-					System.out.println("hostInfo: last updated by = "
+					logger.debug("hostInfo: last updated by = "
 							+ theResponse.getLastUpdatedBy());
 				}
 
 				// Last Updated Date
 				if (theResponse.getLastUpdatedDate() != null) {
-					System.out.println("hostInfo: last updated date = "
+					logger.debug("hostInfo: last updated date = "
 							+ theResponse.getLastUpdatedDate());
 				}
 
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
@@ -351,14 +350,43 @@ public class NSHostController extends BaseNSController{
 				this.returnSession(theSession);
 		}
 
-		printEnd("testHostInfo");
+		printEnd("HostInfo");
+		return renderError("unknown");
+	}
+
+	private void getHostAddress(EPPHostInfoResp theResponse) {
+		if (theResponse.getAddresses() != null) {
+            // For each Address
+            for (int i = 0; i < theResponse.getAddresses().size(); i++) {
+                EPPHostAddress currAddress = (EPPHostAddress) theResponse
+                        .getAddresses().elementAt(i);
+
+                System.out.print("hostInfo: address " + (i + 1));
+
+                // Address Name
+                System.out.print(" name = " + currAddress.getName());
+
+                // IPV4 Address?
+                if (currAddress.getType() == EPPHostAddress.IPV4) {
+                    logger.debug(", type = IPV4");
+                }
+
+                // IPV6 Address?
+                else if (currAddress.getType() == EPPHostAddress.IPV4) {
+                    logger.debug(", type = IPV6");
+                }
+            }
+        }
 	}
 
 	/**
 	 * <code>NSHost.sendDelete</code> command.
 	 */
-	public void doHostDelete(HttpServletRequest request) {
-		printStart("testHostDelete");
+	@RequestMapping(value = "/delete",method = RequestMethod.POST)
+	@SystemControllerLog(description = "删除HOST")
+	@ResponseBody
+	public Object doHostDelete(HttpServletRequest request, @RequestBody NSHostParam params) {
+		printStart("HostDelete");
 
 		EPPSession theSession = null;
 		EPPResponse theResponse = null;
@@ -367,21 +395,21 @@ public class NSHostController extends BaseNSController{
 			com.verisign.epp.namestore.interfaces.NSHost theHost = new com.verisign.epp.namestore.interfaces.NSHost(theSession);
 
 			try {
-				System.out.println("\nhostDelete: Host delete");
+				logger.debug("\nhostDelete: Host delete");
 
 				theHost.setTransId(getClientTransId(request));
 
-				theHost.addHostName(this.makeInternalHost());
+				theHost.addHostName(params.getInternalHostName());
 				theHost.setSubProductID(NSSubProduct.COM);
 
 				theResponse = theHost.sendDelete();
 
 				// -- Output all of the response attributes
-				System.out.println("hostDelete: Response = [" + theResponse
+				logger.debug("hostDelete: Response = [" + theResponse
 						+ "]\n\n");
 
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
@@ -398,14 +426,18 @@ public class NSHostController extends BaseNSController{
 				this.returnSession(theSession);
 		}
 
-		printEnd("testHostDelete");
+		printEnd("HostDelete");
+		return renderError("unknown");
 	}
 
 	/**
 	 * <code>NSHost.sendUpdate</code> command.
 	 */
-	public void doHostUpdate(HttpServletRequest request) {
-		printStart("testHostUpdate");
+	@RequestMapping(value = "/update",method = RequestMethod.POST)
+	@SystemControllerLog(description = "更新HOST")
+	@ResponseBody
+	public Object doHostUpdate(HttpServletRequest request, @RequestBody NSHostUpdateParam params) {
+		printStart("HostUpdate");
 
 		EPPSession theSession = null;
 		EPPResponse theResponse = null;
@@ -417,35 +449,43 @@ public class NSHostController extends BaseNSController{
 
 				theHost.setTransId(getClientTransId(request));
 
-				String theHostName = this.makeInternalHost();
+				String theHostName = params.getInternalHostName();
 
-				System.out.println("\nhostUpdate: Host " + theHostName
+				logger.debug("\nhostUpdate: Host " + theHostName
 						+ " update");
 
 				theHost.addHostName(theHostName);
 				theHost.setSubProductID(NSSubProduct.COM);
 
 				// Add attributes
-				theHost.addIPV4Address(this.makeIP());
-
-				// Remove attributes
-				theHost.removeIPV6Address("1080:0:0:0:8:800:200C:417A");
-
-				theHost.addStatus(EPPHost.STAT_OK, "Hello_World",
-						EPPHost.DEFAULT_LANG);
-
-				theHost.removeStatus(EPPHost.STAT_OK,
-						"Hello World with spaces", EPPHost.DEFAULT_LANG);
+				for(String s:params.getAddIpv4()){
+					theHost.addIPV4Address(s);
+				}
+				for(String s:params.getAddIpv6()){
+					theHost.addIPV4Address(s);
+				}
+				for(String s:params.getRemoveIpv4()){
+					theHost.removeIPV4Address(s);
+				}
+				for(String s:params.getRemoveIpv6()){
+					theHost.removeIPV6Address(s);
+				}
+				for(String s:params.getAddHostStatus()){
+					theHost.addStatus(s);
+				}
+				for(String s:params.getRemoveHostStatus()){
+					theHost.removeStatus(s);
+				}
 
 				// Execute update
 				theResponse = theHost.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("hostUpdate: Response = [" + theResponse
+				logger.debug("hostUpdate: Response = [" + theResponse
 						+ "]\n\n");
 
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
@@ -461,16 +501,20 @@ public class NSHostController extends BaseNSController{
 				this.returnSession(theSession);
 		}
 
-		printEnd("testHostUpdate");
+		printEnd("HostUpdate");
+		return renderError("unknown");
 	}
 
 	/**
-	 * Unit test using {@link com.verisign.epp.namestore.interfaces.NSHost#setResellerId(String)} to set the reseller
+	 * Unit  using {@link com.verisign.epp.namestore.interfaces.NSHost#setResellerId(String)} to set the reseller
 	 * identifier on create and
 	 * {@link com.verisign.epp.namestore.interfaces.NSHost#updateResellerId(Action, String)}
 	 * to update the reseller identifier of an existing host.
 	 */
-	public void doResellerId(HttpServletRequest request) {
+	@RequestMapping(value = "/resellerid",method = RequestMethod.POST)
+	@SystemControllerLog(description = "resellerid")
+	@ResponseBody
+	public Object doResellerId(HttpServletRequest request, @RequestBody NSHostParam params) {
 		printStart("testResellerId");
 
 		EPPSession theSession = null;
@@ -496,7 +540,7 @@ public class NSHostController extends BaseNSController{
 				theResponse = theHost.sendCreate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: Create Response = ["
+				logger.debug("testResellerId: Create Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -521,7 +565,7 @@ public class NSHostController extends BaseNSController{
 				theResponse = theHost.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: ADD Update Response = ["
+				logger.debug("testResellerId: ADD Update Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -545,7 +589,7 @@ public class NSHostController extends BaseNSController{
 				theResponse = theHost.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: CHG Update Response = ["
+				logger.debug("testResellerId: CHG Update Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -569,7 +613,7 @@ public class NSHostController extends BaseNSController{
 				theResponse = theHost.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: REM Update Response = ["
+				logger.debug("testResellerId: REM Update Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -589,6 +633,7 @@ public class NSHostController extends BaseNSController{
 		}
 
 		printEnd("testResellerId");
+		return renderError("unknown");
 	}
 
 } // End class NSHostController

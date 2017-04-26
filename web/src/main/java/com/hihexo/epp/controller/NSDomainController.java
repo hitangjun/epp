@@ -21,11 +21,13 @@ package com.hihexo.epp.controller;
 
 
 import com.hihexo.epp.common.aspect.SystemControllerLog;
+import com.hihexo.epp.model.NSDomainCreateParam;
+import com.hihexo.epp.model.NSDomainDsDataCreateParam;
+import com.hihexo.epp.model.NSRelatedDomainCreateParam;
 import com.hihexo.epp.namestore.interfaces.NSSubProduct;
 import com.verisign.epp.codec.coaext.EPPCoaExtAttr;
 import com.verisign.epp.codec.coaext.EPPCoaExtInfData;
 import com.verisign.epp.codec.coaext.EPPCoaExtKey;
-import com.verisign.epp.codec.coaext.EPPCoaExtValue;
 import com.verisign.epp.codec.domain.*;
 import com.verisign.epp.codec.gen.EPPFactory;
 import com.verisign.epp.codec.gen.EPPResponse;
@@ -51,11 +53,15 @@ import com.verisign.epp.interfaces.EPPSession;
 import com.verisign.epp.namestore.interfaces.NSDomain;
 import com.verisign.epp.util.InvalidateSessionException;
 import com.verisign.epp.util.TestUtil;
+import io.swagger.annotations.ApiOperation;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
@@ -64,11 +70,28 @@ import java.util.*;
 @RequestMapping("/domain")
 public class NSDomainController extends BaseNSController{
 	
-	public static org.slf4j.Logger logger = LoggerFactory.getLogger(NSDomainController.class);
+	private static org.slf4j.Logger logger = LoggerFactory.getLogger(NSDomainController.class);
 
+	@ApiOperation(value="createDomain", notes="" +
+			"参数示例：" +
+			"{\n" +
+			"\t \"adminContact\": \"hihexo\",\n" +
+			"\t \"authStr\": \"string\",\n" +
+			"\t \"billContact\": \"hihexo\",\n" +
+			"\t \"domainName\": \"testcreatedomain.com\",\n" +
+			"\t \"hostNames\": [\n" +
+			"\t \"1234host.testcreatedomain.com\"\n" +
+			"\t ],\n" +
+			"\t \"period\": 1,\n" +
+			"\t \"periodUnit\": \"y\",\n" +
+			"\t \"techContact\": \"hihexo\"\n" +
+			"\t }" +
+			"" +
+			"")
 	@RequestMapping(value = "/create",method = RequestMethod.POST)
 	@SystemControllerLog(description = "创建域名")
-	public void doDomainCreate(HttpServletRequest request) {
+	@ResponseBody
+	public Object doDomainCreate(HttpServletRequest request, @RequestBody NSDomainCreateParam params) {
 		printStart("doDomainCreate");
 
 		EPPSession theSession = null;
@@ -88,221 +111,77 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.addDomainName(theDomainName);
 				theDomain.setSubProductID(NSSubProduct.COM);
-				theDomain.setAuthString(getAuthString());
+				theDomain.setAuthString(getAuthString(params));
 
-				theResponse = theDomain.sendCreate();
 
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug("\n----------------------------------------------------------------");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with all optional attributes");
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-//				for (int i = 0; i <= 20; i++) {
-					theDomain.addHostName(this.makeHostName(theDomainName));//DNS 解析？？// FIXME: 2017/4/25
-//				}
+				for (String s:params.getHostNames()) {
+					theDomain.addHostName(s);//DNS 解析？？// FIXME: 2017/4/25
+				}
 
 				// Is the contact mapping supported?
 				//不同的联系人信息
 				if (EPPFactory.getInstance().hasService(
 						EPPDomainMapFactory.NS_CONTACT)) {
-					// Add domain contacts
-					theDomain.addContact("SH0000",
-							EPPDomain.CONTACT_ADMINISTRATIVE);
-					theDomain.addContact("SH0000", EPPDomain.CONTACT_TECHNICAL);
-					theDomain.addContact("SH0000", EPPDomain.CONTACT_BILLING);
+					if(StringUtils.isNotEmpty(params.getAdminContact())){
+						theDomain.addContact(params.getAdminContact(),
+								EPPDomain.CONTACT_ADMINISTRATIVE);
+					}
+					if(StringUtils.isNotEmpty(params.getTechContact())){
+						theDomain.addContact(params.getTechContact(),
+								EPPDomain.CONTACT_TECHNICAL);
+					}
+					if(StringUtils.isNotEmpty(params.getBillContact())){
+						theDomain.addContact(params.getBillContact(),
+								EPPDomain.CONTACT_BILLING);
+					}
 				}
 
-				//设置注册期限 10年
-				theDomain.setPeriodLength(10);
-				theDomain.setPeriodUnit(EPPDomain.PERIOD_YEAR);
-				theDomain.setAuthString(getAuthString());
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with SecDNS Extension");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setAuthString(getAuthString());
-
+				//设置注册期限 单位：年
+				theDomain.setPeriodLength(params.getPeriod());
+				theDomain.setPeriodUnit(params.getPeriodUnit());
+				theDomain.setAuthString(getAuthString(params));
+/**
 				// -- Add secDNS Extension
 				// instantiate a secDNS:keyData object
-				EPPSecDNSExtKeyData keyData = new EPPSecDNSExtKeyData();
-				keyData.setFlags(EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP);
-				keyData.setProtocol(EPPSecDNSExtKeyData.DEFAULT_PROTOCOL);
-				keyData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				keyData.setPubKey("AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5Zj"
-						+ "vxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUs"
-						+ "poZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2"
-						+ "AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIO"
-						+ "OvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==");
-
+				EPPSecDNSExtKeyData keyData = params.getKeyData();
 				// instantiate another secDNS:keyData object
-				EPPSecDNSExtKeyData keyData2 = new EPPSecDNSExtKeyData(
-						EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP,
-						EPPSecDNSExtKeyData.DEFAULT_PROTOCOL,
-						EPPSecDNSAlgorithm.RSASHA1,
-						"AQOxXpFbRp7+zPBoTt6zL7Af0aEKzpS4JbVB"
-								+ "5ofk5E5HpXuUmU+Hnt9hm2kMph6LZdEEL142"
-								+ "nq0HrgiETFCsN/YM4Zn+meRkELLpCG93Cu/H"
-								+ "hwvxfaZenUAAA6Vb9FwXQ1EMYRW05K/gh2Ge"
-								+ "w5Sk/0o6Ev7DKG2YiDJYA17QsaZtFw==");
+				EPPSecDNSExtKeyData keyData2 = params.getKeyData2();
 
-				// instantiate a secDNS:dsData object
-				EPPSecDNSExtDsData dsData = new EPPSecDNSExtDsData();
-				dsData.setKeyTag(34095);
-				dsData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				dsData.setDigestType(EPPSecDNSExtDsData.SHA1_DIGEST_TYPE);
-				dsData.setDigest("6BD4FFFF11566D6E6A5BA44ED0018797564AA289");
-				dsData.setKeyData(keyData);
-
-				// instantiate another secDNS:dsData object
-				EPPSecDNSExtDsData dsData2 = new EPPSecDNSExtDsData(10563,
-						EPPSecDNSAlgorithm.RSASHA1,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"9C20674BFF957211D129B0DFE9410AF753559D4B", keyData2);
+				EPPSecDNSExtDsData dsData = params.getDsData();
+				EPPSecDNSExtDsData dsData2 = params.getDsData2();
 
 				// dsData Records
 				List dsDataRecords = new ArrayList();
-				dsDataRecords.add(dsData);
-				dsDataRecords.add(dsData2);
-
-				//
-				theDomain.setSecDNSCreate(dsDataRecords);
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with SecDNS and COA Extensions");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setAuthString("ClientX");
-
-				// -- Add secDNS Extension
-				// instantiate a secDNS:keyData object
-				EPPSecDNSExtKeyData keyData = new EPPSecDNSExtKeyData();
-				keyData.setFlags(EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP);
-				keyData.setProtocol(EPPSecDNSExtKeyData.DEFAULT_PROTOCOL);
-				keyData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				keyData.setPubKey("AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5Zj"
-						+ "vxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUs"
-						+ "poZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2"
-						+ "AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIO"
-						+ "OvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==");
-
-				// instantiate another secDNS:keyData object
-				EPPSecDNSExtKeyData keyData2 = new EPPSecDNSExtKeyData(
-						EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP,
-						EPPSecDNSExtKeyData.DEFAULT_PROTOCOL,
-						EPPSecDNSAlgorithm.RSASHA1,
-						"AQOxXpFbRp7+zPBoTt6zL7Af0aEKzpS4JbVB"
-								+ "5ofk5E5HpXuUmU+Hnt9hm2kMph6LZdEEL142"
-								+ "nq0HrgiETFCsN/YM4Zn+meRkELLpCG93Cu/H"
-								+ "hwvxfaZenUAAA6Vb9FwXQ1EMYRW05K/gh2Ge"
-								+ "w5Sk/0o6Ev7DKG2YiDJYA17QsaZtFw==");
-
 				// instantiate a secDNS:dsData object
-				EPPSecDNSExtDsData dsData = new EPPSecDNSExtDsData();
-				dsData.setKeyTag(34095);
-				dsData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				dsData.setDigestType(EPPSecDNSExtDsData.SHA1_DIGEST_TYPE);
-				dsData.setDigest("6BD4FFFF11566D6E6A5BA44ED0018797564AA289");
-				dsData.setKeyData(keyData);
+				if(dsData!=null){
+					// instantiate another secDNS:dsData object
+					dsData.setKeyData(keyData);
+					dsDataRecords.add(dsData);
+				}
+				if(dsData2 !=null){
+					dsData2.setKeyData(keyData2);
+					dsDataRecords.add(dsData2);
+				}
 
-				// instantiate another secDNS:dsData object
-				EPPSecDNSExtDsData dsData2 = new EPPSecDNSExtDsData(10563,
-						EPPSecDNSAlgorithm.RSASHA1,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"9C20674BFF957211D129B0DFE9410AF753559D4B", keyData2);
-
-				// dsData Records
-				List dsDataRecords = new ArrayList();
-				dsDataRecords.add(dsData);
-				dsDataRecords.add(dsData2);
-
-				theDomain.setSecDNSCreate(dsDataRecords);
+				if(dsDataRecords.size()>0){
+					theDomain.setSecDNSCreate(dsDataRecords);
+				}
 
 				// Client Object Attributes
-				EPPCoaExtKey key = new EPPCoaExtKey("KEY1");
-				EPPCoaExtValue value = new EPPCoaExtValue("value1");
-				EPPCoaExtAttr attr = new EPPCoaExtAttr();
-				attr.setKey(key);
-				attr.setValue(value);
+				if(params.getCoaExtKeyValuesMap() != null && params.getCoaExtKeyValuesMap().size() > 0){
+					List attrList = new ArrayList();
+					for (Map.Entry<String, String> entry : params.getCoaExtKeyValuesMap().entrySet()) {
+						EPPCoaExtKey key = new EPPCoaExtKey(entry.getKey());
+						EPPCoaExtValue value = new EPPCoaExtValue(entry.getValue());
+						EPPCoaExtAttr attr = new EPPCoaExtAttr();
+						attr.setKey(key);
+						attr.setValue(value);
+						attrList.add(attr);
+					}
+					theDomain.setCoaCreate(attrList);
+				}
 
-				List attrList = new ArrayList();
-				attrList.add(attr);
-
-				theDomain.setCoaCreate(attrList);
-
+**/
 				theResponse = theDomain.sendCreate();
 
 				// -- Output all of the response attributes
@@ -315,58 +194,11 @@ public class NSDomainController extends BaseNSController{
 
 				logger.debug("domainCreate: expiration date = "
 						+ theResponse.getExpirationDate());
-
+				return renderSuccess(theResponse);
 			}
 			catch (Exception ex) {
 				TestUtil.handleException(theSession, ex);
 			}
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with COA Extension");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setAuthString("ClientX");
-
-				// Client Object Attributes
-				EPPCoaExtKey key = new EPPCoaExtKey("KEY1");
-				EPPCoaExtValue value = new EPPCoaExtValue("value1");
-				EPPCoaExtAttr attr = new EPPCoaExtAttr();
-				attr.setKey(key);
-				attr.setValue(value);
-
-				List attrList = new ArrayList();
-				attrList.add(attr);
-
-				theDomain.setCoaCreate(attrList);
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
 		}
 		catch (InvalidateSessionException ex) {
 			this.invalidateSession(theSession);
@@ -378,11 +210,13 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainCreate");
+		return renderError("unknown");
 	}
 
 	@RequestMapping(value = "/relatedcreate",method = RequestMethod.POST) 	@SystemControllerLog(description = "关联域名")
-	public void  doRelatedDomainCreate(HttpServletRequest request) {
-		printStart("testRelatedDomainCreate ");
+	@ResponseBody
+	public Object  doRelatedDomainCreate(HttpServletRequest request, @RequestBody NSRelatedDomainCreateParam params) {
+		printStart("RelatedDomainCreate ");
 
 		EPPSession theSession = null;
 		EPPDomainCreateResp theResponse = null;
@@ -395,20 +229,19 @@ public class NSDomainController extends BaseNSController{
 				logger.debug
 						("\ntestRelatedDomainCreate: Domain create of example.com and related domains");
 
-				theDomain.addDomainName("example.com");
-				theDomain.setTransId("ABC-12349");
-				theDomain.setAuthString("2fooBAR");
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setTransId(getClientTransId(request));
+				theDomain.setAuthString(params.getAuthStr());
 
 				final EPPRelatedDomainExtAuthInfo authInfo = new EPPRelatedDomainExtAuthInfo(
-						"relDom123!");
+						params.getRelatedDomainPwd());
 				final EPPRelatedDomainExtPeriod period = new EPPRelatedDomainExtPeriod(
-						5);
-				theDomain.addRelatedDomain(new EPPRelatedDomainExtDomain(
-						"domain1.com", authInfo, period));
-				theDomain.addRelatedDomain(new EPPRelatedDomainExtDomain(
-						"domain2.com", authInfo, period));
-				theDomain.addRelatedDomain(new EPPRelatedDomainExtDomain(
-						"xn--idn.com", authInfo, period, "CHI"));
+						params.getPeriodUnit(),params.getRelatedPeriod());
+
+				for(String s : params.getRelatedDomain()){
+					theDomain.addRelatedDomain(new EPPRelatedDomainExtDomain(
+							s, authInfo, period));
+				}
 
 				theResponse = theDomain.sendRelatedCreate();
 
@@ -424,10 +257,11 @@ public class NSDomainController extends BaseNSController{
 					logger.debug
 							("testRelatedDomainCreate: EPPRelatedDomainExtCreateResp = ["
 									+ relatedDomainCreData + "]\n\n");
-
+					return renderSuccess(theResponse);
 				}
 				else {
-					Assert.fail("testRelatedDomainCreate: EPPRelatedDomainExtCreateResp extension not included for domain-create with related domains.");
+					Assert.fail("RelatedDomainCreate: EPPRelatedDomainExtCreateResp extension not included for domain-create with related domains.");
+					return renderError("EPPRelatedDomainExtCreateResp extension not included for domain-create with related domains.");
 				}
 			}
 			catch (Exception ex) {
@@ -445,6 +279,7 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("testRelatedDomainCreate");
+		return renderError("unknown");
 	}
 
 	/**
@@ -460,8 +295,9 @@ public class NSDomainController extends BaseNSController{
 	 */
 	@RequestMapping(value = "/createdsdata",method = RequestMethod.POST)
 	@SystemControllerLog(description = "创建DSdata")
-	public void  testCreateDsDataInterface(HttpServletRequest request) {
-		printStart("testCreateDsDataInterface");
+	@ResponseBody
+	public Object  doCreateDsDataInterface(HttpServletRequest request, @RequestBody NSDomainDsDataCreateParam params) {
+		printStart("CreateDsDataInterface");
 
 		EPPSession theSession = null;
 		EPPDomainCreateResp theResponse = null;
@@ -474,83 +310,56 @@ public class NSDomainController extends BaseNSController{
 				logger.debug
 						("\n----------------------------------------------------------------");
 
-				String theDomainName = this.makeDomainName();
+				String theDomainName = params.getDomainName();
 
 				logger.debug
-						("testCreateDsDataInterface(1): domain = "
+						("CreateDsDataInterface(1): domain = "
 								+ theDomainName
 								+ ", Create for a Secure Delegation using the DS Data Interface with one DS");
 
 				theDomain.setTransId(getClientTransId(request));
-
 				theDomain.addDomainName(theDomainName);
 				theDomain.setSubProductID(NSSubProduct.COM);
-				theDomain.setAuthString("ClientX");
+				theDomain.setAuthString(params.getAuthStr());
 
 				// Add DS
 				List dsDataList = new ArrayList();
-				dsDataList.add(new EPPSecDNSExtDsData(12345,
-						EPPSecDNSAlgorithm.DSA,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"49FD46E6C4B45C55D4AC"));
-				theDomain.setSecDNSCreate(dsDataList);
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("testCreateDsDataInterface(1): Response = ["
-						+ theResponse + "]\n\n");
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug
-						("testCreateDsDataInterface(2): domain = "
-								+ theDomainName
-								+ ", Create for a Secure Delegation using the DS Data Interface with two DS");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theDomain.setAuthString("ClientX");
-
-				// Add DS
-				List dsDataList = new ArrayList();
-				dsDataList.add(new EPPSecDNSExtDsData(12345,
-						EPPSecDNSAlgorithm.DSA,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"49FD46E6C4B45C55D4AC"));
+//				dsDataList.add(new EPPSecDNSExtDsData(12345,
+//						EPPSecDNSAlgorithm.DSA,
+//						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
+//						"49FD46E6C4B45C55D4AC"));
 
 				// Key Data associated with DS to add
-				EPPSecDNSExtKeyData keyData = new EPPSecDNSExtKeyData();
-				keyData.setFlags(EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP);
-				keyData.setProtocol(EPPSecDNSExtKeyData.DEFAULT_PROTOCOL);
-				keyData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				keyData.setPubKey("AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5Zj"
-						+ "vxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUs"
-						+ "poZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2"
-						+ "AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIO"
-						+ "OvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==");
+//				EPPSecDNSExtKeyData keyData = new EPPSecDNSExtKeyData();
+//				keyData.setFlags(EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP);
+//				keyData.setProtocol(EPPSecDNSExtKeyData.DEFAULT_PROTOCOL);
+//				keyData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
+//				keyData.setPubKey("AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5Zj"
+//						+ "vxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUs"
+//						+ "poZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2"
+//						+ "AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIO"
+//						+ "OvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==");
 
-				dsDataList.add(keyData.toDsData(
-						"testCreateDsDataInterface.com",
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE));
-
-				theDomain.setSecDNSCreate(dsDataList);
-
+//				dsDataList.add(keyData.toDsData(
+//						"testCreateDsDataInterface.com",
+//						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE));
+/**
+				if(params.getDsData()!=null){
+					dsDataList.add(params.getDsData());
+				}
+				if(params.getKeyData()!=null){
+					dsDataList.add(params.getKeyData().toDsData(params.getDomainName(),EPPSecDNSExtDsData.SHA1_DIGEST_TYPE));
+				}
+				if(dsDataList.size() > 0){
+					theDomain.setSecDNSCreate(dsDataList);
+				}
+**/
 				theResponse = theDomain.sendCreate();
 
 				// -- Output all of the response attributes
-				logger.debug("testCreateDsDataInterface(2): Response = ["
+				logger.debug("CreateDsDataInterface: Response = ["
 						+ theResponse + "]\n\n");
+				return renderSuccess(theResponse);
 			}
 			catch (Exception ex) {
 				TestUtil.handleException(theSession, ex);
@@ -565,7 +374,8 @@ public class NSDomainController extends BaseNSController{
 				this.returnSession(theSession);
 		}
 
-		printEnd("testCreateDsDataInterface");
+		printEnd("CreateDsDataInterface");
+		return renderError("unknown");
 	}
 
 	/**
@@ -579,7 +389,7 @@ public class NSDomainController extends BaseNSController{
 	 * </ol>
 	 */
 	@RequestMapping(value = "/updatedsdata",method = RequestMethod.POST) 	@SystemControllerLog(description = "更新DSdata")
-	public void  testUpdateDsDataInterface(HttpServletRequest request) {
+	public void  doUpdateDsDataInterface(HttpServletRequest request) {
 		printStart("testUpdateDsDataInterface");
 
 		EPPSession theSession = null;
@@ -2417,7 +2227,7 @@ public class NSDomainController extends BaseNSController{
 	 * test of the use of pipelining.
 	 */
 	@RequestMapping(value = "/asynccommands",method = RequestMethod.POST) 	@SystemControllerLog(description = "AsyncCommands")
-	public void  testAsyncCommands() {
+	public void  doAsyncCommands() {
 		printStart("testAsyncCommands");
 
 		EPPSession theSession = null;
@@ -2523,7 +2333,7 @@ public class NSDomainController extends BaseNSController{
 	 * support secDNS-1.0 with NSDomain for backward compatibility.
 	 */
 	@RequestMapping(value = "/secdns10",method = RequestMethod.POST) 	@SystemControllerLog(description = "SecDNS10")
-	public void  testSecDNS10(HttpServletRequest request) {
+	public void  doSecDNS10(HttpServletRequest request) {
 		printStart("testSecDNS10");
 
 		EPPSession theSession = null;

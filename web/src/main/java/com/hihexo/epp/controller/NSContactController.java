@@ -29,6 +29,7 @@ import com.verisign.epp.namestore.interfaces.NSContact;
 import com.verisign.epp.namestore.interfaces.NSSubProduct;
 import com.verisign.epp.util.InvalidateSessionException;
 import com.verisign.epp.util.TestUtil;
+import org.slf4j.LoggerFactory;
 
 import java.util.Vector;
 
@@ -41,7 +42,7 @@ import java.util.Vector;
  * @see EPPContact
  */
 public class NSContactController extends BaseNSController{
-
+	private static org.slf4j.Logger logger = LoggerFactory.getLogger(NSContactController.class);
 	/**
 	 * <code>NSContact.sendCreate</code> command.
 	 */

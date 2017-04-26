@@ -1,5 +1,6 @@
 package com.hihexo.epp.common.interceptor;
 
+import com.hihexo.epp.common.util.Constants;
 import com.hihexo.epp.common.util.IPutil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,6 +10,7 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Enumeration;
+import java.util.UUID;
 
 /**
  * 请求合法性检查拦截器
@@ -46,8 +48,11 @@ public class RequestInterceptor implements HandlerInterceptor {
         String ip = IPutil.getIpAddr(request);
         String path = request.getServletPath();
         logger.debug("===> " + ip + " --  "+path);
-
+        request.setAttribute(Constants.TARNS_ID,
+                ip.replace(".","").replace(":","")
+                +UUID.randomUUID().toString().replace("-",""));//TODO
  		logParams(request);
+
 //        if (isInvalidHeader(request)) {
 //            response.setHeader("Content-type", "text/html;charset=UTF-8");
 //            response.setContentType("application/json;charset=UTF-8");

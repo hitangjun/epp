@@ -20,6 +20,7 @@ public abstract class BaseController {
         resultVo.setData(object);
         return resultVo;
     }
+
     public ResultVo renderSuccess(String message){
         ResultVo resultVo = new ResultVo<>();
         resultVo.setResult(true);
@@ -33,6 +34,7 @@ public abstract class BaseController {
         resultVo.setData(obj);
         return resultVo;
     }
+
     public ResultVo renderSuccess(){
         ResultVo resultVo = new ResultVo<>();
         resultVo.setResult(true);
