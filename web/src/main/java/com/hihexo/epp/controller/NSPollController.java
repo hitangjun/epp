@@ -67,7 +67,6 @@ public class NSPollController extends BaseNSController {
 			logger.debug("params="+params);
 			logger.debug("domainName="+domainName);
 			logger.debug("authStr="+authStr);
-			logger.debug("user="+params.getUser());
 			try {
 				NSDomain theDomain = new NSDomain(theSession);
 				theDomain.addDomainName(domainName);
