@@ -21,19 +21,16 @@ package com.hihexo.epp.controller;
 
 
 import com.hihexo.epp.common.aspect.SystemControllerLog;
-import com.hihexo.epp.model.NSDomainCreateParam;
-import com.hihexo.epp.model.NSDomainDsDataCreateParam;
-import com.hihexo.epp.model.NSRelatedDomainCreateParam;
+import com.hihexo.epp.common.base.ResultVo;
+import com.hihexo.epp.model.*;
 import com.hihexo.epp.namestore.interfaces.NSSubProduct;
 import com.verisign.epp.codec.coaext.EPPCoaExtAttr;
-import com.verisign.epp.codec.coaext.EPPCoaExtInfData;
 import com.verisign.epp.codec.coaext.EPPCoaExtKey;
+import com.verisign.epp.codec.coaext.EPPCoaExtValue;
 import com.verisign.epp.codec.domain.*;
 import com.verisign.epp.codec.gen.EPPFactory;
 import com.verisign.epp.codec.gen.EPPResponse;
 import com.verisign.epp.codec.premiumdomain.EPPPremiumDomainCheck;
-import com.verisign.epp.codec.premiumdomain.EPPPremiumDomainCheckResp;
-import com.verisign.epp.codec.premiumdomain.EPPPremiumDomainCheckResult;
 import com.verisign.epp.codec.premiumdomain.EPPPremiumDomainReAssignCmd;
 import com.verisign.epp.codec.relateddomainext.EPPRelatedDomainExtAuthInfo;
 import com.verisign.epp.codec.relateddomainext.EPPRelatedDomainExtCreateResp;
@@ -44,9 +41,7 @@ import com.verisign.epp.codec.rgpext.EPPRgpExtReport;
 import com.verisign.epp.codec.rgpext.EPPRgpExtReportText;
 import com.verisign.epp.codec.secdnsext.v11.EPPSecDNSAlgorithm;
 import com.verisign.epp.codec.secdnsext.v11.EPPSecDNSExtDsData;
-import com.verisign.epp.codec.secdnsext.v11.EPPSecDNSExtInfData;
 import com.verisign.epp.codec.secdnsext.v11.EPPSecDNSExtKeyData;
-import com.verisign.epp.codec.whois.EPPWhoisInfData;
 import com.verisign.epp.interfaces.EPPCommandException;
 import com.verisign.epp.interfaces.EPPDomain;
 import com.verisign.epp.interfaces.EPPSession;
@@ -55,6 +50,9 @@ import com.verisign.epp.util.InvalidateSessionException;
 import com.verisign.epp.util.TestUtil;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.junit.Assert;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -75,18 +73,21 @@ public class NSDomainController extends BaseNSController{
 	@ApiOperation(value="createDomain", notes="" +
 			"参数示例：" +
 			"{\n" +
-			"\t \"adminContact\": \"hihexo\",\n" +
-			"\t \"authStr\": \"string\",\n" +
-			"\t \"billContact\": \"hihexo\",\n" +
-			"\t \"domainName\": \"testcreatedomain.com\",\n" +
-			"\t \"hostNames\": [\n" +
-			"\t \"1234host.testcreatedomain.com\"\n" +
-			"\t ],\n" +
-			"\t \"period\": 1,\n" +
-			"\t \"periodUnit\": \"y\",\n" +
-			"\t \"techContact\": \"hihexo\"\n" +
-			"\t }" +
-			"" +
+			"  \"adminContact\": \"hihexo\",\n" +
+			"  \"authStr\": \"string\",\n" +
+			"  \"billContact\": \"hihexo\",\n" +
+			"  \"domainName\": \"testcreatedomain.com\",\n" +
+			"  \"hostNames\": [\n" +
+			"    \"1234host.testcreatedomain.com\"\n" +
+			"  ],\n" +
+			"  \"period\": 1,\n" +
+			"  \"periodUnit\": \"y\",\n" +
+			"  \"coaExtKeyValuesMap\": {\n" +
+			"    \"mykey1\": \"v1\",\n" +
+			"    \"myk2\": \"v2\"\n" +
+			"  },\n" +
+			"  \"techContact\": \"hihexo\"\n" +
+			"}" +
 			"")
 	@RequestMapping(value = "/create",method = RequestMethod.POST)
 	@SystemControllerLog(description = "创建域名")
@@ -110,7 +111,7 @@ public class NSDomainController extends BaseNSController{
 				theDomain.setTransId(getClientTransId(request));
 
 				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.setSubProductID(params.getDomainProductID());
 				theDomain.setAuthString(getAuthString(params));
 
 
@@ -166,7 +167,7 @@ public class NSDomainController extends BaseNSController{
 				if(dsDataRecords.size()>0){
 					theDomain.setSecDNSCreate(dsDataRecords);
 				}
-
+ **/
 				// Client Object Attributes
 				if(params.getCoaExtKeyValuesMap() != null && params.getCoaExtKeyValuesMap().size() > 0){
 					List attrList = new ArrayList();
@@ -181,7 +182,7 @@ public class NSDomainController extends BaseNSController{
 					theDomain.setCoaCreate(attrList);
 				}
 
-**/
+
 				theResponse = theDomain.sendCreate();
 
 				// -- Output all of the response attributes
@@ -293,9 +294,25 @@ public class NSDomainController extends BaseNSController{
 	 * DS. One DS created from key data.
 	 * </ol>
 	 */
-	@RequestMapping(value = "/createdsdata",method = RequestMethod.POST)
-	@SystemControllerLog(description = "创建DSdata")
-	@ResponseBody
+	@ApiOperation(value="createdsdata",notes="{\n" +
+			"  \"authStr\": \"authstring\",\n" +
+			"  \"domainName\": \"hihexo.com\",\n" +
+			"  \"dsData\": {\n" +
+			"    \"alg\": 3,\n" +
+			"    \"digest\": \"49FD46E6C4B45C55D4AC\",\n" +
+			"    \"digestType\": 1,\n" +
+			"    \"keyTag\": 12345\n" +
+			"  },\n" +
+			"  \"keyData\": {\n" +
+			"    \"alg\": 5,\n" +
+			"    \"flags\": 257,\n" +
+			"    \"protocol\": 3,\n" +
+			"    \"pubKey\": \"AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5ZjvxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUspoZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIOOvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==\"\n" +
+			"  }\n" +
+			"}")
+//	@RequestMapping(value = "/createdsdata",method = RequestMethod.POST)
+//	@SystemControllerLog(description = "创建DSdata")
+//	@ResponseBody
 	public Object  doCreateDsDataInterface(HttpServletRequest request, @RequestBody NSDomainDsDataCreateParam params) {
 		printStart("CreateDsDataInterface");
 
@@ -319,7 +336,7 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransId(getClientTransId(request));
 				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.setSubProductID(params.getDomainProductID());
 				theDomain.setAuthString(params.getAuthStr());
 
 				// Add DS
@@ -343,7 +360,7 @@ public class NSDomainController extends BaseNSController{
 //				dsDataList.add(keyData.toDsData(
 //						"testCreateDsDataInterface.com",
 //						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE));
-/**
+
 				if(params.getDsData()!=null){
 					dsDataList.add(params.getDsData());
 				}
@@ -353,12 +370,9 @@ public class NSDomainController extends BaseNSController{
 				if(dsDataList.size() > 0){
 					theDomain.setSecDNSCreate(dsDataList);
 				}
-**/
+
 				theResponse = theDomain.sendCreate();
 
-				// -- Output all of the response attributes
-				logger.debug("CreateDsDataInterface: Response = ["
-						+ theResponse + "]\n\n");
 				return renderSuccess(theResponse);
 			}
 			catch (Exception ex) {
@@ -388,9 +402,10 @@ public class NSDomainController extends BaseNSController{
 	 * <li>Replacing all DS Data using the DS Data Interface.
 	 * </ol>
 	 */
-	@RequestMapping(value = "/updatedsdata",method = RequestMethod.POST) 	@SystemControllerLog(description = "更新DSdata")
-	public void  doUpdateDsDataInterface(HttpServletRequest request) {
-		printStart("testUpdateDsDataInterface");
+//	@RequestMapping(value = "/updatedsdata",method = RequestMethod.POST) 	@SystemControllerLog(description = "更新DSdata")
+//	@ResponseBody
+	public ResultVo doUpdateDsDataInterface(HttpServletRequest request, @RequestBody NSDomainParam params) {
+		printStart("UpdateDsDataInterface");
 
 		EPPSession theSession = null;
 		EPPResponse theResponse = null;
@@ -413,7 +428,7 @@ public class NSDomainController extends BaseNSController{
 				theDomain.setTransId(getClientTransId(request));
 
 				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.setSubProductID(params.getDomainProductID());
 				theDomain.setAuthString("ClientX");
 
 				List addDsDataList = new ArrayList();
@@ -511,13 +526,35 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("testUpdateDsDataInterface");
+		return null;
 	}
 
 	/**
 	 * <code>NSDomain.sendDomainCheck</code> command.
 	 */
+	@ApiOperation(value = "domaincheck",notes = "" +
+			"{\n" +
+			"  \"authStr\": \"authString\",\n" +
+			"  \"checkDomainNames\": [\n" +
+			"    \"secDns.com\",\n" +
+			"    \"secDnc.com\"\n" +
+			"  ],\n" +
+			"  \"domainProductID\": \"dotCom\",\n" +
+			"  \"isCheckPremium\": false\n" +
+			"}" +
+			"" +
+			"{\n" +
+			"  \"authStr\": \"authString\",\n" +
+			"  \"checkDomainNames\": [\n" +
+			"    \"secDnc.tv\"\n" +
+			"  ],\n" +
+			"  \"domainProductID\": \"dotTv\",\n" +
+			"  \"isCheckPremium\": true\n" +
+			"}" +
+			"")
 	@RequestMapping(value = "/check",method = RequestMethod.POST) 	@SystemControllerLog(description = "核查域名")
-	public void  doDomainCheck(HttpServletRequest request) {
+	@ResponseBody
+	public ResultVo  doDomainCheck(HttpServletRequest request,@RequestBody NSDomainCheckParam params) {
 		printStart("doDomainCheck");
 
 		EPPSession theSession = null;
@@ -530,234 +567,31 @@ public class NSDomainController extends BaseNSController{
 
 				logger.debug("\n----------------------------------------------------------------");
 
-				String theDomainName = this.makeDomainName();
+				String theDomainName = params.getDomainName();
 				logger.debug("domainCheck: Check single domain name ("
 						+ theDomainName + ")");
 
 				theDomain.setTransId(getClientTransId(request));
+				for(String s:params.getCheckDomainNames()){
+					theDomain.addDomainName(s);
+				}
+				theDomain.setSubProductID(params.getDomainProductID());
 
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theResponse = theDomain.sendCheck();
-
-				logger.debug("Response Type = " + theResponse.getType());
-
-				logger.debug("Response.TransId.ServerTransId = "
-						+ theResponse.getTransId().getServerTransId());
-
-				logger.debug("Response.TransId.ServerTransId = "
-						+ theResponse.getTransId().getClientTransId());
-
-				// Output all of the response attributes
-				logger.debug("\ndomainCheck: Response = [" + theResponse
-						+ "]");
-
-				// For each result
-				for (int i = 0; i < theResponse.getCheckResults().size(); i++) {
-					EPPDomainCheckResult currResult = (EPPDomainCheckResult) theResponse
-							.getCheckResults().elementAt(i);
-
-					if (currResult.isAvailable()) {
-						logger.debug("domainCheck: Domain "
-								+ currResult.getName() + " is available");
-					}
-					else {
-						logger.debug("domainCheck: Domain "
-								+ currResult.getName() + " is not available");
-					}
+				if(params.getIsCheckPremium()){
+					EPPPremiumDomainCheck extension = new EPPPremiumDomainCheck(
+							true);
+					theDomain.addExtension(extension);
 				}
 
+				theResponse = theDomain.sendCheck();
 				this.handleResponse(theResponse);
 			}
 			catch (Exception ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
-			try {
-				// Check multiple domain names
-
-				logger.debug("\n----------------------------------------------------------------");
-				logger.debug("domainCheck: Check multiple domain names (example1.com, example2.com, example3.com)");
-				theDomain.setTransId(getClientTransId(request));
-
-				/**
-				 * Add example(1-3).com
-				 */
-				theDomain.addDomainName("example1.com");
-				theDomain.addDomainName("example2.com");
-				theDomain.addDomainName("example3.com");
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				for (int i = 0; i <= 10; i++) {
-					theDomain.addDomainName(this.makeDomainName());
-				}
-
-				theResponse = theDomain.sendCheck();
-
-				// Output all of the response attributes
-				logger.debug("\ndomainCheck: Response = [" + theResponse
-						+ "]");
-				logger.debug("Client Transaction Id = "
-						+ theResponse.getTransId().getClientTransId());
-				logger.debug("Server Transaction Id = "
-						+ theResponse.getTransId().getServerTransId());
-
-				// For each result
-				for (int i = 0; i < theResponse.getCheckResults().size(); i++) {
-					EPPDomainCheckResult currResult = (EPPDomainCheckResult) theResponse
-							.getCheckResults().elementAt(i);
-
-					if (currResult.isAvailable()) {
-						logger.debug("domainCheck: Domain "
-								+ currResult.getName() + " is available");
-					}
-					else {
-						logger.debug("domainCheck: Domain "
-								+ currResult.getName() + " is not available");
-					}
-				}
-
-				this.handleResponse(theResponse);
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = "non-premiumdomain.tv";
-				logger.debug
-						("nonPremiumDomainCheck: Check single domain name With Flag True ("
-								+ theDomainName + ")");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.TV);
-
-				EPPPremiumDomainCheck extension = new EPPPremiumDomainCheck(
-						true);
-				theDomain.addExtension(extension);
-
-				theResponse = theDomain.sendCheck();
-
-				// Output all of the response attributes
-				logger.debug("\nnonPremiumDomainCheck: Response = ["
-						+ theResponse + "]");
-
-				this.handleResponse(theResponse);
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = "premium.tv";
-				logger.debug
-						("premiumDomainCheck: Check single domain name With Flag True ("
-								+ theDomainName + ")");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.TV);
-
-				EPPPremiumDomainCheck extension = new EPPPremiumDomainCheck(
-						true);
-				theDomain.addExtension(extension);
-
-				theResponse = theDomain.sendCheck();
-
-				// Output all of the response attributes
-				logger.debug("\npremiumDomainCheck: Response = ["
-						+ theResponse + "]");
-
-				this.handleResponse(theResponse);
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				// Check multiple domain names
-				logger.debug
-						("\n----------------------------------------------------------------");
-				logger.debug
-						("premiumDomainCheck: Check multiple domain names With Flag True ");
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.setSubProductID(NSSubProduct.TV);
-
-				for (int i = 1; i <= 3; i++) {
-					theDomain.addDomainName("premium" + i + ".tv");
-				}
-
-				EPPPremiumDomainCheck extension = new EPPPremiumDomainCheck(
-						true);
-				theDomain.addExtension(extension);
-
-				theResponse = theDomain.sendCheck();
-
-				// Output all of the response attributes
-				logger.debug("\npremiumDomainCheck: Response = ["
-						+ theResponse + "]");
-
-				// For each result
-				for (int i = 0; i < theResponse.getCheckResults().size(); i++) {
-					EPPDomainCheckResult currResult = (EPPDomainCheckResult) theResponse
-							.getCheckResults().elementAt(i);
-
-					if (currResult.isAvailable()) {
-						logger.debug("domainCheck: Domain "
-								+ currResult.getName() + " is available");
-					}
-					else {
-						logger.debug("domainCheck: Domain "
-								+ currResult.getName() + " is not available");
-					}
-				}
-
-				if (theResponse.hasExtension(EPPPremiumDomainCheckResp.class)) {
-					EPPPremiumDomainCheckResp premiumDomainCheckResponse = (EPPPremiumDomainCheckResp) theResponse
-							.getExtension(EPPPremiumDomainCheckResp.class);
-
-					// For each result
-					for (int i = 0; i < premiumDomainCheckResponse
-							.getCheckResults().size(); i++) {
-						EPPPremiumDomainCheckResult currResult = (EPPPremiumDomainCheckResult) premiumDomainCheckResponse
-								.getCheckResults().elementAt(i);
-
-						if (currResult.isPremium()) {
-							logger.debug("domainCheck: Domain "
-									+ currResult.getName() + " is premium");
-							if (currResult.getPrice() != null) {
-								logger.debug
-										("domainCheck: Premium price is $"
-												+ currResult.getPrice());
-								logger.debug
-										("domainCheck: Premium renewal price is $"
-												+ currResult.getRenewalPrice());
-							}
-						}
-						else {
-							logger.debug("domainCheck: Domain "
-									+ currResult.getName() + " is not premium");
-						}
-					}
-				}
-				this.handleResponse(theResponse);
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
+			return renderSuccess(theResponse);
 
 		}
 		catch (InvalidateSessionException ex) {
@@ -770,13 +604,20 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainCheck");
+		return renderError("unknown");
 	}
 
 	/**
 	 * <code>NSDomain.sendDomainInfo</code> command.
 	 */
+	@ApiOperation(value = "info",notes = "{\n" +
+			"  \"authStr\": \"authstring\",\n" +
+			"  \"domainName\": \"secdns.com\",\n" +
+			"  \"domainProductID\": \"dotCom\"\n" +
+			"}")
 	@RequestMapping(value = "/info",method = RequestMethod.POST) 	@SystemControllerLog(description = "域名信息")
-	public void  doDomainInfo(HttpServletRequest request) {
+	@ResponseBody
+	public ResultVo  doDomainInfo(HttpServletRequest request,@RequestBody NSDomainInfoParam params) {
 		printStart("doDomainInfo");
 
 		EPPSession theSession = null;
@@ -790,312 +631,18 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransId(getClientTransId(request));
 
-				theDomain.addDomainName(this.makeDomainName());
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setSubProductID(params.getDomainProductID());
 				theDomain.setHosts(com.verisign.epp.namestore.interfaces.NSDomain.HOSTS_ALL);
-
+				theDomain.setWhoisInfo(true);
 				theResponse = theDomain.sendInfo();
-
-				// -- Output all of the response attributes
-				logger.debug("domainInfo: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output required response attributes using accessors
-				logger.debug("domainInfo: name            = "
-						+ theResponse.getName());
-
-				logger.debug("domainInfo: client id       = "
-						+ theResponse.getClientId());
-
-				logger.debug("domainInfo: created by      = "
-						+ theResponse.getCreatedBy());
-
-				logger.debug("domainInfo: create date     = "
-						+ theResponse.getCreatedDate());
-
-				logger.debug("domainInfo: expiration date = "
-						+ theResponse.getExpirationDate());
-
-				logger.debug("domainInfo: Registrant      = "
-						+ theResponse.getRegistrant());
-
-				/**
-				 * Process Contacts
-				 */
-				if (theResponse.getContacts() != null) {
-					for (int i = 0; i < theResponse.getContacts().size(); i++) {
-						EPPDomainContact myContact = (EPPDomainContact) theResponse
-								.getContacts().elementAt(i);
-
-						logger.debug("Contact Name : "
-								+ myContact.getName());
-
-						logger.debug("Contact Type : "
-								+ myContact.getType());
-					}
-				}
-
-				/**
-				 * Get AuthInfo
-				 */
-				if (theResponse.getAuthInfo() != null) {
-					logger.debug("Authorization        : "
-							+ theResponse.getAuthInfo().getPassword());
-
-					logger.debug("Authorization (Roid) : "
-							+ theResponse.getAuthInfo().getRoid());
-				}
-
-				/**
-				 * Get Hosts
-				 */
-				if (theResponse.getHosts() != null) {
-					for (int i = 0; i < theResponse.getHosts().size(); i++) {
-						logger.debug("Host Name : "
-								+ theResponse.getHosts().elementAt(i));
-					}
-				}
-
-				/**
-				 * Get Ns
-				 */
-				if (theResponse.getNses() != null) {
-					for (int i = 0; i < theResponse.getNses().size(); i++) {
-						logger.debug("Name Server : "
-								+ theResponse.getNses().elementAt(i));
-					}
-				}
-
-				/**
-				 * Get Status
-				 */
-				if (theResponse.getStatuses() != null) {
-					for (int i = 0; i < theResponse.getStatuses().size(); i++) {
-						EPPDomainStatus myStatus = (EPPDomainStatus) theResponse
-								.getStatuses().elementAt(i);
-
-						logger.debug("Lang     : " + myStatus.getLang());
-
-						logger.debug
-								("Status   : " + myStatus.getStatus());
-					}
-				}
-
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 			catch (Exception ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError("unknown");
 			}
-
-			// Request whois information with domain info response.
-			// NOTE - This might not be supported by the target Registry server.
-			// Check that the server supports the Whois Info Extension.
-			try {
-				logger.debug
-						("\ndomainInfo: Domain info with whois information");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(this.makeDomainName());
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theDomain.setWhoisInfo(true);
-
-				theResponse = theDomain.sendInfo();
-
-				// -- Output all of the response attributes
-				logger.debug("domainInfo: Response = [" + theResponse
-						+ "]\n\n");
-
-				// Output the whois information
-				if (theResponse.hasExtension(EPPWhoisInfData.class)) {
-					EPPWhoisInfData theWhoisInf = (EPPWhoisInfData) theResponse
-							.getExtension(EPPWhoisInfData.class);
-
-					logger.debug("domainInfo: registrar    = "
-							+ theWhoisInf.getRegistrar());
-
-					logger.debug("domainInfo: whois server = "
-							+ theWhoisInf.getWhoisServer());
-
-					logger.debug("domainInfo: url          = "
-							+ theWhoisInf.getURL());
-
-					logger.debug("domainInfo: iris server  = "
-							+ theWhoisInf.getIrisServer());
-				}
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug
-						("\ndomainInfo: Domain info with SecDNS extension");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName("secdns.com");
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theResponse = theDomain.sendInfo();
-
-				// -- Output all of the response attributes
-				logger.debug("domainInfo: Response DNSSEC = ["
-						+ theResponse + "]\n\n");
-
-				// -- Output the secDNS:infData extension
-				if (theResponse.hasExtension(EPPSecDNSExtInfData.class)) {
-					EPPSecDNSExtInfData infData = (EPPSecDNSExtInfData) theResponse
-							.getExtension(EPPSecDNSExtInfData.class);
-
-					Collection dsDataVec = infData.getDsData();
-					EPPSecDNSExtDsData dsData = null;
-					if (dsDataVec == null) {
-						logger.debug
-								("domainInfo: secDNS:infData dsDataVec = "
-										+ dsDataVec);
-					}
-					else {
-						int i = 0;
-						Iterator iter = dsDataVec.iterator();
-						while (iter.hasNext()) {
-							dsData = (EPPSecDNSExtDsData) iter.next();
-							// logger.debug("domainInfo:
-							// secDNS:infData/dsData[" + i + "] = "
-							// + dsData);
-							logger.debug
-									("domainInfo: secDNS:infData/dsData["
-											+ i
-											+ "]/keyTag = "
-											+ dsData.getKeyTag());
-							logger.debug
-									("domainInfo: secDNS:infData/dsData["
-											+ i + "]/alg = " + dsData.getAlg());
-							logger.debug
-									("domainInfo: secDNS:infData/dsData["
-											+ i
-											+ "]/digestType = "
-											+ dsData.getDigestType());
-							logger.debug
-									("domainInfo: secDNS:infData/dsData["
-											+ i
-											+ "]/digest = "
-											+ dsData.getDigest());
-
-							EPPSecDNSExtKeyData keyData = dsData.getKeyData();
-							if (keyData == null) {
-								logger.debug
-										("domainInfo: secDNS:infData/dsData["
-												+ i + "]/keyData = " + keyData);
-							}
-							else {
-								// logger.debug("domainInfo:
-								// secDNS:infData/dsData[" + i + "]/keyData = "
-								// + keyData);
-								logger.debug("domainInfo: secDNS:infData/dsData["
-												+ i
-												+ "]/keyData/flags = "
-												+ keyData.getFlags());
-								logger.debug("domainInfo: secDNS:infData/dsData["
-												+ i
-												+ "]/keyData/protocol = "
-												+ keyData.getProtocol());
-								logger.debug("domainInfo: secDNS:infData/dsData["
-												+ i
-												+ "]/keyData/alg = "
-												+ keyData.getAlg());
-								logger.debug("domainInfo: secDNS:infData/dsData["
-												+ i
-												+ "]/keyData/pubKey = "
-												+ keyData.getPubKey());
-							}
-
-							i++;
-
-						} // end while
-					}
-
-				}
-				else {
-					Assert.fail("domainInfo: no EPPSecDNSExtInfData extension");
-				}
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug
-						("\ndomainInfo: Domain info with COA extension");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName("coa-full-info-owned.com");
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theResponse = theDomain.sendInfo();
-
-				// -- Output all of the response attributes
-				logger.debug("domainInfo: Response COA = [" + theResponse
-						+ "]\n\n");
-
-				if (theResponse.hasExtension(EPPCoaExtInfData.class)) {
-
-					EPPCoaExtInfData coaInfData = (EPPCoaExtInfData) theResponse
-							.getExtension(EPPCoaExtInfData.class);
-
-					for (Iterator iterator = coaInfData.getAttrs().iterator(); iterator
-							.hasNext();) {
-						EPPCoaExtAttr attr = (EPPCoaExtAttr) iterator.next();
-						String key = attr.getKey().getKey();
-						String value = attr.getValue().getValue();
-						logger.debug("Client Object Attribute: key='"
-								+ key + "', value='" + value + "'");
-
-					}
-				}
-				else {
-					Assert.fail("domainInfo: no EPPCoaExtInfData extension");
-				}
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug
-						("\ndomainInfo: Domain info for domain with RGP statuses");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName("graceperiod.com");
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theResponse = theDomain.sendInfo();
-
-				// -- Output all of the response attributes
-				logger.debug
-						("domainInfo: Response for graceperiod.com = ["
-								+ theResponse + "]\n\n");
-
-				this.printRgpStatuses(theResponse);
-
-				theDomain.addDomainName("pendingperiod.com");
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theResponse = theDomain.sendInfo();
-
-				// -- Output all of the response attributes
-				logger.debug
-						("domainInfo: Response for pendingperiod.com = ["
-								+ theResponse + "]\n\n");
-
-				this.printRgpStatuses(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
 		}
 		catch (InvalidateSessionException ex) {
 			this.invalidateSession(theSession);
@@ -1107,13 +654,16 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainInfo");
+		return renderError("unknown");
 	}
 
 	/**
 	 * <code>NSDomain.sendDelete</code> command.
 	 */
+	@ApiOperation(value = "delete", notes = "")
 	@RequestMapping(value = "/delete",method = RequestMethod.POST) 	@SystemControllerLog(description = "删除域名")
-	public void  doDomainDelete(HttpServletRequest request) {
+	@ResponseBody
+	public ResultVo doDomainDelete(HttpServletRequest request, @RequestBody NSDomainParam params ) {
 		printStart("doDomainDelete");
 
 		EPPSession theSession = null;
@@ -1127,8 +677,8 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransId(getClientTransId(request));
 
-				theDomain.addDomainName(this.makeDomainName());
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				theResponse = theDomain.sendDelete();
 
@@ -1137,11 +687,12 @@ public class NSDomainController extends BaseNSController{
 						+ "]\n\n");
 
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
 		}
@@ -1155,13 +706,16 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainDelete");
+		return renderError("unknown");
 	}
 
 	/**
 	 * <code>NSDomain.sendDomainRenew</code> command.
 	 */
+	@ApiOperation(value = "renew", notes = "")
 	@RequestMapping(value = "/renew",method = RequestMethod.POST) 	@SystemControllerLog(description = "续费域名")
-	public void  doDomainRenew(HttpServletRequest request) {
+	@ResponseBody
+	public ResultVo  doDomainRenew(HttpServletRequest request,@RequestBody NSDomainRenewParam params ) {
 		printStart("doDomainRenew");
 
 		EPPSession theSession = null;
@@ -1178,15 +732,15 @@ public class NSDomainController extends BaseNSController{
 				logger.debug("\ndomainRenew: Domain " + theDomainName
 						+ " renew");
 
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setSubProductID(params.getDomainProductID());
 
-				theDomain.setExpirationDate(new GregorianCalendar(2004, 2, 3)
-						.getTime());
+				DateTimeFormatter format = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+				DateTime dateTime = DateTime.parse(params.getExpiretime(), format);
+				theDomain.setExpirationDate(dateTime.toDate());
 
-				theDomain.setPeriodLength(10);
-
-				theDomain.setPeriodUnit(EPPDomain.PERIOD_YEAR);
+				theDomain.setPeriodLength(params.getPeriod());
+				theDomain.setPeriodUnit(params.getPeriodUnit());
 
 				theResponse = theDomain.sendRenew();
 
@@ -1200,7 +754,6 @@ public class NSDomainController extends BaseNSController{
 
 				logger.debug("domainRenew: expiration date = "
 						+ theResponse.getExpirationDate());
-
 			}
 
 			catch (EPPCommandException ex) {
@@ -1208,7 +761,7 @@ public class NSDomainController extends BaseNSController{
 			}
 
 			this.handleResponse(theResponse);
-
+			return renderSuccess(theResponse);
 		}
 		catch (InvalidateSessionException ex) {
 			this.invalidateSession(theSession);
@@ -1220,13 +773,15 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainRenew");
+		return renderError("unknown");
 	}
 
 	/**
 	 * <code>NSDomain.sendUpdate</code> command.
 	 */
 	@RequestMapping(value = "/update",method = RequestMethod.POST) 	@SystemControllerLog(description = "更新域名")
-	public void  doDomainUpdate(HttpServletRequest request) {
+	@ResponseBody
+	public ResultVo  doDomainUpdate(HttpServletRequest request,@RequestBody NSDomainUpdateParam params ) {
 		printStart("doDomainUpdate");
 
 		EPPSession theSession = null;
@@ -1239,46 +794,64 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransId(getClientTransId(request));
 
-				String theDomainName = this.makeDomainName();
+				String theDomainName = params.getDomainName();
 
 				logger.debug("\ndomainUpdate: Domain " + theDomainName
 						+ " update");
 
 				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				// Add attributes
 				// Is the contact mapping supported?
 				if (EPPFactory.getInstance().hasService(
 						EPPDomainMapFactory.NS_CONTACT)) {
-					theDomain.setUpdateAttrib(EPPDomain.CONTACT, "SH0000",
-							EPPDomain.CONTACT_BILLING, EPPDomain.ADD);
+					for(String s:params.getAddBillContact()){
+						theDomain.setUpdateAttrib(EPPDomain.CONTACT, s,
+								EPPDomain.CONTACT_BILLING, EPPDomain.ADD);
+					}
 				}
 
-				theDomain.setUpdateAttrib(EPPDomain.HOST,
-						this.makeHostName(theDomainName), EPPDomain.ADD);
+				for(String s:params.getAddHostName()){
+					theDomain.setUpdateAttrib(EPPDomain.HOST,s, EPPDomain.ADD);
+				}
 
-				theDomain.setUpdateAttrib(EPPDomain.STATUS,
-						new EPPDomainStatus(EPPDomain.STATUS_CLIENT_HOLD),
-						EPPDomain.ADD);
+				for(String s:params.getAddDomainStatus()){
+					theDomain.setUpdateAttrib(EPPDomain.STATUS,
+							new EPPDomainStatus(s),
+							EPPDomain.ADD);
+				}
 
 				// Remove attributes
-				theDomain.setUpdateAttrib(EPPDomain.HOST,
-						this.makeHostName(theDomainName), EPPDomain.REMOVE);
+				for(String s:params.getRemoveHostName()){
+					theDomain.setUpdateAttrib(EPPDomain.HOST,s, EPPDomain.REMOVE);
+				}
 
-				theDomain.setUpdateAttrib(EPPDomain.STATUS,
-						new EPPDomainStatus(EPPDomain.STATUS_CLIENT_HOLD),
-						EPPDomain.REMOVE);
+				for(String s:params.getRemoveDomainStatus()){
+					theDomain.setUpdateAttrib(EPPDomain.STATUS,
+							new EPPDomainStatus(s),
+							EPPDomain.REMOVE);
+				}
 
 				// Is the contact mapping supported?
 				if (EPPFactory.getInstance().hasService(
 						EPPDomainMapFactory.NS_CONTACT)) {
-					theDomain.setUpdateAttrib(EPPDomain.CONTACT, "SH0000",
-							EPPDomain.CONTACT_BILLING, EPPDomain.REMOVE);
+					for(String s:params.getRemoveBillContact()){
+						theDomain.setUpdateAttrib(EPPDomain.CONTACT, s,
+								EPPDomain.CONTACT_BILLING, EPPDomain.REMOVE);
+					}
 				}
 
 				// Update the authInfo value
-				theDomain.setAuthString("new-auth-info-123");
+				if(StringUtils.isNotEmpty(params.getNewAuthStr())){
+					theDomain.setAuthString(params.getNewAuthStr());
+				}
+
+				if(StringUtils.isNotEmpty(params.getRegistararShortName())){
+					EPPPremiumDomainReAssignCmd extension = new EPPPremiumDomainReAssignCmd();
+					extension.setShortName(params.getRegistararShortName());
+					theDomain.addExtension(extension);
+				}
 
 				// Execute update
 				theResponse = theDomain.sendUpdate();
@@ -1288,176 +861,11 @@ public class NSDomainController extends BaseNSController{
 						+ "]\n\n");
 
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("\ndomainUpdate: Domain " + theDomainName
-						+ " update/add with SecDNS extension");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				// instantiate a secDNS:keyData object
-				EPPSecDNSExtKeyData keyData = new EPPSecDNSExtKeyData();
-				keyData.setFlags(EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP);
-				keyData.setProtocol(EPPSecDNSExtKeyData.DEFAULT_PROTOCOL);
-				keyData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				keyData.setPubKey("AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5Zj"
-						+ "vxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUs"
-						+ "poZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2"
-						+ "AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIO"
-						+ "OvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==");
-
-				// instantiate another secDNS:keyData object
-				EPPSecDNSExtKeyData keyData2 = new EPPSecDNSExtKeyData(
-						EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP,
-						EPPSecDNSExtKeyData.DEFAULT_PROTOCOL,
-						EPPSecDNSAlgorithm.RSASHA1,
-						"AQOxXpFbRp7+zPBoTt6zL7Af0aEKzpS4JbVB"
-								+ "5ofk5E5HpXuUmU+Hnt9hm2kMph6LZdEEL142"
-								+ "nq0HrgiETFCsN/YM4Zn+meRkELLpCG93Cu/H"
-								+ "hwvxfaZenUAAA6Vb9FwXQ1EMYRW05K/gh2Ge"
-								+ "w5Sk/0o6Ev7DKG2YiDJYA17QsaZtFw==");
-
-				// instantiate a secDNS:dsData object
-				EPPSecDNSExtDsData dsData = new EPPSecDNSExtDsData();
-				dsData.setKeyTag(34095);
-				dsData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				dsData.setDigestType(EPPSecDNSExtDsData.SHA1_DIGEST_TYPE);
-				dsData.setDigest("6BD4FFFF11566D6E6A5BA44ED0018797564AA289");
-				dsData.setKeyData(keyData);
-
-				// instantiate another secDNS:dsData object
-				EPPSecDNSExtDsData dsData2 = new EPPSecDNSExtDsData(10563,
-						EPPSecDNSAlgorithm.RSASHA1,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"9C20674BFF957211D129B0DFE9410AF753559D4B", keyData2);
-
-				// instantiate the add DS Data
-				List addDsData = new ArrayList();
-				addDsData.add(dsData);
-				addDsData.add(dsData2);
-
-				theDomain.setSecDNSUpdate(addDsData, null);
-
-				// Execute update
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainUpdate: Response = [" + theResponse
-						+ "]\n\n");
-
-				this.handleResponse(theResponse);
-
-				// Send DNSSEC update with urgent set to true
-				theDomain.setTransId("ABC-12345-XYZ-2");
-
-				theDomainName = this.makeDomainName();
-
-				logger.debug
-						("\ndomainUpdate: Domain "
-								+ theDomainName
-								+ " update/add with SecDNS extension and urgent = true");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setSecDNSUpdate(addDsData, null);
-
-				// Execute update
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainUpdate: Response = [" + theResponse
-						+ "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("\ndomainUpdate: Domain " + theDomainName
-						+ " update/rem with SecDNS extension");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				// instantiate a secDNS:dsData object
-				EPPSecDNSExtDsData dsData = new EPPSecDNSExtDsData();
-				dsData.setKeyTag(34095);
-				dsData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				dsData.setDigestType(EPPSecDNSExtDsData.SHA1_DIGEST_TYPE);
-				dsData.setDigest("6BD4FFFF11566D6E6A5BA44ED0018797564AA289");
-
-				// instantiate another secDNS:dsData object
-				EPPSecDNSExtDsData dsData2 = new EPPSecDNSExtDsData(10563,
-						EPPSecDNSAlgorithm.RSASHA1,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"9C20674BFF957211D129B0DFE9410AF753559D4B");
-
-				// instantiate the secDNS:update object
-				List rmvDsData = new ArrayList();
-				rmvDsData.add(dsData);
-				rmvDsData.add(dsData2);
-
-				theDomain.setSecDNSUpdate(null, rmvDsData);
-
-				// Execute update
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainUpdate: Response = [" + theResponse
-						+ "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				theDomain.setTransId(getClientTransId(request));
-				String theDomainName = "premium.tv";
-
-				logger.debug("\npremiumDomainUpdate: Domain "
-						+ theDomainName + " update with ReAssign extension");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.TV);
-
-				EPPPremiumDomainReAssignCmd extension = new EPPPremiumDomainReAssignCmd();
-				extension.setShortName("testregistrar");
-				theDomain.addExtension(extension);
-
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainUpdate: Response = [" + theResponse
-						+ "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
 		}
@@ -1471,13 +879,15 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainUpdate");
+		return renderError("unknown");
 	}
 
 	/**
 	 * <code>NSDomain.sendTransfer</code> command.
 	 */
-	@RequestMapping(value = "/transfer",method = RequestMethod.POST) 	@SystemControllerLog(description = "创建域名")
-	public void  doDomainTransfer(HttpServletRequest request) {
+	@RequestMapping(value = "/transfer/request",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
+	@ResponseBody
+	public ResultVo  doDomainTransfer(HttpServletRequest request,@RequestBody  NSDomainTransferParam params) {
 		printStart("doDomainTransfer");
 
 		EPPSession theSession = null;
@@ -1497,14 +907,14 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransId(getClientTransId(request));
 
-				theDomain.setAuthString("ClientX");
+				theDomain.setAuthString(params.getAuthStr());
 
-				theDomain.addDomainName(this.makeDomainName());
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setSubProductID(params.getDomainProductID());
 
-				theDomain.setPeriodLength(10);
+				theDomain.setPeriodLength(params.getPeriod());
 
-				theDomain.setPeriodUnit(EPPDomain.PERIOD_YEAR);
+				theDomain.setPeriodUnit(params.getPeriodUnit());
 
 				// Execute the transfer query
 				theResponse = theDomain.sendTransfer();
@@ -1539,12 +949,39 @@ public class NSDomainController extends BaseNSController{
 				}
 
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
 			}
+
+		}
+		catch (InvalidateSessionException ex) {
+			this.invalidateSession(theSession);
+			theSession = null;
+		}
+		finally {
+			if (theSession != null)
+				this.returnSession(theSession);
+		}
+
+		printEnd("doDomainTransfer");
+		return renderError("fail");
+	}
+
+	@RequestMapping(value = "/transfer/query",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
+	@ResponseBody
+	public ResultVo  doDomainTransferQuery(HttpServletRequest request,@RequestBody  NSDomainParam params) {
+		printStart("doDomainTransfer");
+
+		EPPSession theSession = null;
+		EPPDomainTransferResp theResponse = null;
+
+		try {
+			theSession = this.borrowSession();
+			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
+			String theDomainName = this.makeDomainName();
 
 			// Transfer Query
 			try {
@@ -1558,8 +995,8 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransId(getClientTransId(request));
 
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				// Execute the transfer query
 				theResponse = theDomain.sendTransfer();
@@ -1593,11 +1030,39 @@ public class NSDomainController extends BaseNSController{
 							("domainTransferQuery: expiration date = "
 									+ theResponse.getExpirationDate());
 				}
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
+		}
+		catch (InvalidateSessionException ex) {
+			this.invalidateSession(theSession);
+			theSession = null;
+		}
+		finally {
+			if (theSession != null)
+				this.returnSession(theSession);
+		}
+
+		printEnd("doDomainTransfer");
+		return renderError("unknown");
+	}
+
+	@RequestMapping(value = "/transfer/cancel",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
+	@ResponseBody
+	public ResultVo  doDomainTransferCancel(HttpServletRequest request,@RequestBody  NSDomainParam params) {
+		printStart("doDomainTransfer");
+
+		EPPSession theSession = null;
+		EPPDomainTransferResp theResponse = null;
+
+		try {
+			theSession = this.borrowSession();
+			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
+			String theDomainName = this.makeDomainName();
 
 			// Transfer Cancel
 			try {
@@ -1609,8 +1074,8 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransferOpCode(EPPDomain.TRANSFER_CANCEL);
 
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				// Execute the transfer cancel
 				theResponse = theDomain.sendTransfer();
@@ -1618,11 +1083,38 @@ public class NSDomainController extends BaseNSController{
 				// -- Output all of the response attributes
 				logger.debug("domainTransfer: Response = [" + theResponse
 						+ "]\n\n");
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
 			}
+		}
+		catch (InvalidateSessionException ex) {
+			this.invalidateSession(theSession);
+			theSession = null;
+		}
+		finally {
+			if (theSession != null)
+				this.returnSession(theSession);
+		}
+
+		printEnd("doDomainTransfer");
+		return renderError("fail");
+	}
+
+	@RequestMapping(value = "/transfer/reject",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
+	@ResponseBody
+	public ResultVo  doDomainTransferReject(HttpServletRequest request,@RequestBody  NSDomainParam params) {
+		printStart("doDomainTransfer");
+
+		EPPSession theSession = null;
+		EPPDomainTransferResp theResponse = null;
+
+		try {
+			theSession = this.borrowSession();
+			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
+			String theDomainName = this.makeDomainName();
 
 			// Transfer Reject
 			try {
@@ -1634,8 +1126,8 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransferOpCode(EPPDomain.TRANSFER_REJECT);
 
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.addDomainName(params.getDomainName());
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				// Execute the transfer cancel
 				theResponse = theDomain.sendTransfer();
@@ -1643,11 +1135,39 @@ public class NSDomainController extends BaseNSController{
 				// -- Output all of the response attributes
 				logger.debug("domainTransfer: Response = [" + theResponse
 						+ "]\n\n");
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
 			}
+
+		}
+		catch (InvalidateSessionException ex) {
+			this.invalidateSession(theSession);
+			theSession = null;
+		}
+		finally {
+			if (theSession != null)
+				this.returnSession(theSession);
+		}
+
+		printEnd("doDomainTransfer");
+		return renderError("fail");
+	}
+
+	@RequestMapping(value = "/transfer/approve",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
+	@ResponseBody
+	public ResultVo  doDomainTransferApprove(HttpServletRequest request,@RequestBody  NSDomainParam params) {
+		printStart("doDomainTransfer");
+
+		EPPSession theSession = null;
+		EPPDomainTransferResp theResponse = null;
+
+		try {
+			theSession = this.borrowSession();
+			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
+			String theDomainName = this.makeDomainName();
 
 			// Transfer Approve
 			try {
@@ -1667,6 +1187,7 @@ public class NSDomainController extends BaseNSController{
 				// -- Output all of the response attributes
 				logger.debug("domainTransfer: Response = [" + theResponse
 						+ "]\n\n");
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
@@ -1684,13 +1205,14 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainTransfer");
+		return renderError("fail");
 	}
-
 	/**
 	 * <code>NSDomain.sendSync</code> command.
 	 */
-	@RequestMapping(value = "/sync",method = RequestMethod.POST) 	@SystemControllerLog(description = "创建域名")
-	public void  doDomainSync(HttpServletRequest request) {
+	@RequestMapping(value = "/sync",method = RequestMethod.POST) 	@SystemControllerLog(description = "同步域名")
+	@ResponseBody
+	public ResultVo  doDomainSync(HttpServletRequest request,@RequestBody  NSDomainSyncParam params) {
 		printStart("doDomainSync");
 
 		EPPSession theSession = null;
@@ -1703,17 +1225,17 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.setTransId(getClientTransId(request));
 
-				String theDomainName = this.makeDomainName();
+				String theDomainName = params.getDomainName();
 
 				logger.debug("\ndomainSync: Domain " + theDomainName
 						+ " sync");
 
 				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				// Set to June 15th
-				theDomain.setDay(15);
-				theDomain.setMonth(Calendar.JUNE);
+				theDomain.setDay(params.getExpirateDay());
+				theDomain.setMonth(params.getExpirateMonth());
 
 				// Execute update
 				theResponse = theDomain.sendSync();
@@ -1723,7 +1245,7 @@ public class NSDomainController extends BaseNSController{
 						+ "]\n\n");
 
 				this.handleResponse(theResponse);
-
+				return renderSuccess(theResponse);
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
@@ -1740,6 +1262,7 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainSync");
+		return renderError("fail");
 	}
 
 	/**

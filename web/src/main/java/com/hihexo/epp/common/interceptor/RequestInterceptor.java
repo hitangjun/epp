@@ -51,7 +51,7 @@ public class RequestInterceptor implements HandlerInterceptor {
         request.setAttribute(Constants.TARNS_ID,
                 ip.replace(".","").replace(":","")
                 +UUID.randomUUID().toString().replace("-",""));//TODO
- 		logParams(request);
+// 		logParams(request);
 
 //        if (isInvalidHeader(request)) {
 //            response.setHeader("Content-type", "text/html;charset=UTF-8");

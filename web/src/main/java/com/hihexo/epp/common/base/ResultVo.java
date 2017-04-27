@@ -1,5 +1,8 @@
 package com.hihexo.epp.common.base;
 
+import lombok.ToString;
+
+@ToString
 public class ResultVo<T> {
 
     private boolean result = true;

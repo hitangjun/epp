@@ -4,6 +4,9 @@ import com.verisign.epp.interfaces.EPPDomain;
 import lombok.Data;
 import lombok.ToString;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @author JohnTang
  * @date 2017/4/26
@@ -22,6 +25,5 @@ public class NSDomainCreateParam extends BaseParam{
 //    private EPPSecDNSExtKeyData keyData;
 //    private EPPSecDNSExtDsData dsData2 ;
 //    private EPPSecDNSExtKeyData keyData2;
-//
-//    private Map<String,String> coaExtKeyValuesMap = new HashMap<String,String>();
+    private Map<String,String> coaExtKeyValuesMap = new HashMap<String,String>();
 }

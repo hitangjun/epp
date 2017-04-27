@@ -58,7 +58,7 @@ public class SystemLogAspect {
 		}
 	}
 
-	@AfterReturning(value = "@annotation(com.hihexo.epp.common.aspect.SystemControllerLog)", argNames = "rtv", returning = "rtv")
+	@AfterReturning(value = "@annotation(com.hihexo.epp.common.aspect.SystemControllerLog)",  returning = "rtv")
 	public void doAfter(JoinPoint joinPoint, Object rtv) {
 		try {
 			long endTime = new Date().getTime();
@@ -115,8 +115,16 @@ public class SystemLogAspect {
 		}
 		paraString.append("]");
 		String paramNames = paraString.toString();
+
+		Object[] args = joinPoint.getArgs();
+		String argStr = "";
+		for(Object a:args){
+			if(a instanceof HttpServletRequest) continue;
+			argStr+= a +"\t";
+		}
+
 		String logInfo = nowTime + "\t"+ ip + "\t" +
-				requestMethod + "\t" + controllerPath + "\t" + paramNames + "\t" + methodDescription;
+				requestMethod + "\t" + controllerPath + "\t" + paramNames + "\t" + argStr +"\t"+ methodDescription;
 		return logInfo;
 	}
 
