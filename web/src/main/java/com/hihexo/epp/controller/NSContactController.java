@@ -164,7 +164,7 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendCreate();
 
 				// -- Output all of the response attributes
-				logger.debug("testContactCreate: Response = ["
+				logger.debug("testContactCreate: Response == ["
 						+ theResponse + "]\n\n");
 				return renderSuccess(theResponse);
 			}
