@@ -12,4 +12,5 @@ public class BaseParam {
     private String domainName;
     private String authStr;
     private String domainProductID = NSSubProduct.COM;
+    private String allocationToken = "";
 }

@@ -19,6 +19,9 @@
  ***********************************************************/
 package com.hihexo.epp.controller;
 
+import com.hihexo.epp.common.aspect.SystemControllerLog;
+import com.hihexo.epp.common.base.ResultVo;
+import com.hihexo.epp.model.NSDomainTransferParam;
 import com.verisign.epp.codec.contact.*;
 import com.verisign.epp.codec.gen.EPPResponse;
 import com.verisign.epp.codec.resellerext.EPPResellerExtUpdate.Action;
@@ -30,7 +33,13 @@ import com.verisign.epp.namestore.interfaces.NSSubProduct;
 import com.verisign.epp.util.InvalidateSessionException;
 import com.verisign.epp.util.TestUtil;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Vector;
 
 /**
@@ -41,12 +50,16 @@ import java.util.Vector;
  * @see NSContact
  * @see EPPContact
  */
+@Controller
+@RequestMapping("/contact")
 public class NSContactController extends BaseNSController{
 	private static org.slf4j.Logger logger = LoggerFactory.getLogger(NSContactController.class);
 	/**
 	 * <code>NSContact.sendCreate</code> command.
 	 */
-	public void testContactCreate() {
+	@RequestMapping(value = "/transfer/request",method = RequestMethod.POST) 	@SystemControllerLog(description = "创建联系人")
+	@ResponseBody
+	public ResultVo testContactCreate(HttpServletRequest request, @RequestBody NSDomainTransferParam params) {
 		printStart("testContactCreate");
 
 		EPPSession theSession = null;
@@ -57,12 +70,11 @@ public class NSContactController extends BaseNSController{
 			NSContact theContact = new NSContact(theSession);
 
 			try {
-				System.out
-						.println("\n----------------------------------------------------------------");
+				logger.debug("\n----------------------------------------------------------------");
 
 				String theContactName = this.makeContactName();
 
-				System.out.println("testContactCreate: Create "
+				logger.debug("testContactCreate: Create "
 						+ theContactName);
 
 				theContact.setTransId("ABC-12345-XYZ");
@@ -152,9 +164,9 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendCreate();
 
 				// -- Output all of the response attributes
-				System.out.println("testContactCreate: Response = ["
+				logger.debug("testContactCreate: Response = ["
 						+ theResponse + "]\n\n");
-
+				return renderSuccess(theResponse);
 			}
 
 			catch (EPPCommandException ex) {
@@ -165,14 +177,19 @@ public class NSContactController extends BaseNSController{
 		catch (InvalidateSessionException ex) {
 			this.invalidateSession(theSession);
 			theSession = null;
+			return renderError(ex.getMessage());
 		}
 		finally {
-			if (theSession != null)
+			if (theSession != null) {
 				this.returnSession(theSession);
+			}
+
 		}
 
 		printEnd("testContactCreate");
+		return renderError("unknown");
 	}
+
 
 	/**
 	 * <code>NSContact.sendContactCheck</code> command.
@@ -188,12 +205,10 @@ public class NSContactController extends BaseNSController{
 
 			try {
 
-				System.out
-						.println("\n----------------------------------------------------------------");
+				logger.debug("\n----------------------------------------------------------------");
 
 				String theContactName = this.makeContactName();
-				System.out
-						.println("testContactCheck: Check single contact id ("
+				logger.debug("testContactCheck: Check single contact id ("
 								+ theContactName + ")");
 				theContact.setTransId("ABC-12345-XYZ");
 
@@ -202,16 +217,16 @@ public class NSContactController extends BaseNSController{
 
 				theResponse = theContact.sendCheck();
 
-				System.out.println("Response Type = " + theResponse.getType());
+				logger.debug("Response Type = " + theResponse.getType());
 
-				System.out.println("Response.TransId.ServerTransId = "
+				logger.debug("Response.TransId.ServerTransId = "
 						+ theResponse.getTransId().getServerTransId());
 
-				System.out.println("Response.TransId.ServerTransId = "
+				logger.debug("Response.TransId.ServerTransId = "
 						+ theResponse.getTransId().getClientTransId());
 
 				// Output all of the response attributes
-				System.out.println("\ntestContactCheck: Response = ["
+				logger.debug("\ntestContactCheck: Response = ["
 						+ theResponse + "]");
 
 				// For each result
@@ -220,11 +235,11 @@ public class NSContactController extends BaseNSController{
 							.getCheckResults().elementAt(i);
 
 					if (currResult.isAvailable()) {
-						System.out.println("testContactCheck: Contact "
+						logger.debug("testContactCheck: Contact "
 								+ currResult.getId() + " is available");
 					}
 					else {
-						System.out.println("testContactCheck: Contact "
+						logger.debug("testContactCheck: Contact "
 								+ currResult.getId() + " is not available");
 					}
 				}
@@ -237,10 +252,8 @@ public class NSContactController extends BaseNSController{
 
 			try {
 				// Check multiple contact names
-				System.out
-						.println("\n----------------------------------------------------------------");
-				System.out
-						.println("testContactCheck: Check multiple contact names (ns1.example.com, ns2.example.com, ns3.example.com)");
+				logger.debug("\n----------------------------------------------------------------");
+				logger.debug("testContactCheck: Check multiple contact names (ns1.example.com, ns2.example.com, ns3.example.com)");
 				theContact.setTransId("ABC-12345-XYZ");
 
 				/**
@@ -254,11 +267,11 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendCheck();
 
 				// Output all of the response attributes
-				System.out.println("\ntestContactCheck: Response = ["
+				logger.debug("\ntestContactCheck: Response = ["
 						+ theResponse + "]");
-				System.out.println("Client Transaction Id = "
+				logger.debug("Client Transaction Id = "
 						+ theResponse.getTransId().getClientTransId());
-				System.out.println("Server Transaction Id = "
+				logger.debug("Server Transaction Id = "
 						+ theResponse.getTransId().getServerTransId());
 
 				// For each result
@@ -267,11 +280,11 @@ public class NSContactController extends BaseNSController{
 							.getCheckResults().elementAt(i);
 
 					if (currResult.isAvailable()) {
-						System.out.println("testContactCheck: Contact "
+						logger.debug("testContactCheck: Contact "
 								+ currResult.getId() + " is available");
 					}
 					else {
-						System.out.println("testContactCheck: Contact "
+						logger.debug("testContactCheck: Contact "
 								+ currResult.getId() + " is not available");
 					}
 				}
@@ -308,7 +321,7 @@ public class NSContactController extends BaseNSController{
 			NSContact theContact = new NSContact(theSession);
 
 			try {
-				System.out.println("\ntestContactInfo: Contact info");
+				logger.debug("\ntestContactInfo: Contact info");
 
 				theContact.setTransId("ABC-12345-XYZ");
 
@@ -318,11 +331,11 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendInfo();
 
 				// -- Output all of the response attributes
-				System.out.println("testContactInfo: Response = ["
+				logger.debug("testContactInfo: Response = ["
 						+ theResponse + "]\n\n");
 
 				// -- Output required response attributes using accessors
-				System.out.println("testContactInfo: id = "
+				logger.debug("testContactInfo: id = "
 						+ theResponse.getId());
 
 				Vector postalContacts = null;
@@ -332,7 +345,7 @@ public class NSContactController extends BaseNSController{
 
 					for (int j = 0; j < postalContacts.size(); j++) {
 						// Name
-						System.out.println("testContactInfo:\t\tname = "
+						logger.debug("testContactInfo:\t\tname = "
 								+ ((EPPContactPostalDefinition) postalContacts
 										.elementAt(j)).getName());
 
@@ -346,13 +359,13 @@ public class NSContactController extends BaseNSController{
 								.elementAt(j)).getAddress();
 
 						for (int i = 0; i < address.getStreets().size(); i++) {
-							System.out.println("testContactInfo:\t\tstreet"
+							logger.debug("testContactInfo:\t\tstreet"
 									+ (i + 1) + " = "
 									+ address.getStreets().elementAt(i));
 						}
 
 						// Address City
-						System.out.println("testContactInfo:\t\tcity = "
+						logger.debug("testContactInfo:\t\tcity = "
 								+ address.getCity());
 
 						// Address State/Province
@@ -361,87 +374,87 @@ public class NSContactController extends BaseNSController{
 										+ address.getStateProvince());
 
 						// Address Postal Code
-						System.out.println("testContactInfo:\t\tpostal code = "
+						logger.debug("testContactInfo:\t\tpostal code = "
 								+ address.getPostalCode());
 
 						// Address County
-						System.out.println("testContactInfo:\t\tcountry = "
+						logger.debug("testContactInfo:\t\tcountry = "
 								+ address.getCountry());
 					}
 				}
 
 				// Contact E-mail
-				System.out.println("testContactInfo:\temail = "
+				logger.debug("testContactInfo:\temail = "
 						+ theResponse.getEmail());
 
 				// Contact Voice
-				System.out.println("testContactInfo:\tvoice = "
+				logger.debug("testContactInfo:\tvoice = "
 						+ theResponse.getVoice());
 
 				// Contact Voice Extension
-				System.out.println("testContactInfo:\tvoice ext = "
+				logger.debug("testContactInfo:\tvoice ext = "
 						+ theResponse.getVoiceExt());
 
 				// Contact Fax
-				System.out.println("testContactInfo:\tfax = "
+				logger.debug("testContactInfo:\tfax = "
 						+ theResponse.getFax());
 
 				// Contact Fax Extension
-				System.out.println("testContactInfo:\tfax ext = "
+				logger.debug("testContactInfo:\tfax ext = "
 						+ theResponse.getFaxExt());
 
 				// Client Id
-				System.out.println("testContactInfo: client id = "
+				logger.debug("testContactInfo: client id = "
 						+ theResponse.getClientId());
 
 				// Created By
-				System.out.println("testContactInfo: created by = "
+				logger.debug("testContactInfo: created by = "
 						+ theResponse.getCreatedBy());
 
 				// Created Date
-				System.out.println("testContactInfo: create date = "
+				logger.debug("testContactInfo: create date = "
 						+ theResponse.getCreatedDate());
 
 				// -- Output optional response attributes using accessors
 				// Contact Fax
 				if (theResponse.getFax() != null) {
-					System.out.println("testContactInfo:\tfax = "
+					logger.debug("testContactInfo:\tfax = "
 							+ theResponse.getFax());
 				}
 
 				// Contact Voice
 				if (theResponse.getVoice() != null) {
-					System.out.println("testContactInfo:\tVoice = "
+					logger.debug("testContactInfo:\tVoice = "
 							+ theResponse.getVoice());
 				}
 
 				// Last Updated By
 				if (theResponse.getLastUpdatedBy() != null) {
-					System.out.println("testContactInfo: last updated by = "
+					logger.debug("testContactInfo: last updated by = "
 							+ theResponse.getLastUpdatedBy());
 				}
 
 				// Last Updated Date
 				if (theResponse.getLastUpdatedDate() != null) {
-					System.out.println("testContactInfo: last updated date = "
+					logger.debug("testContactInfo: last updated date = "
 							+ theResponse.getLastUpdatedDate());
 				}
 
 				// Last Transfer Date
 				if (theResponse.getLastTransferDate() != null) {
-					System.out.println("testContactInfo: last updated date = "
+					logger.debug("testContactInfo: last updated date = "
 							+ theResponse.getLastTransferDate());
 				}
 
 				// Authorization Id
 				if (theResponse.getAuthInfo() != null) {
-					System.out.println("testContactInfo: authorization info = "
+					logger.debug("testContactInfo: authorization info = "
 							+ theResponse.getAuthInfo().getPassword());
 				}
 
 				// Disclose
 				if (theResponse.getDisclose() != null) {
-					System.out.println("testContactInfo: disclose info = "
+					logger.debug("testContactInfo: disclose info = "
 							+ theResponse.getDisclose());
 				}
 
@@ -478,7 +491,7 @@ public class NSContactController extends BaseNSController{
 			NSContact theContact = new NSContact(theSession);
 
 			try {
-				System.out.println("\ntestContactDelete: Contact delete");
+				logger.debug("\ntestContactDelete: Contact delete");
 
 				theContact.setTransId("ABC-12345-XYZ");
 
@@ -488,7 +501,7 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendDelete();
 
 				// -- Output all of the response attributes
-				System.out.println("testContactDelete: Response = ["
+				logger.debug("testContactDelete: Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -530,7 +543,7 @@ public class NSContactController extends BaseNSController{
 
 				String theContactName = this.makeContactName();
 
-				System.out.println("\ncontactUpdate: Contact " + theContactName
+				logger.debug("\ncontactUpdate: Contact " + theContactName
 						+ " update");
 
 				theContact.addContactId(theContactName);
@@ -598,7 +611,7 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("contactUpdate: Response = [" + theResponse
+				logger.debug("contactUpdate: Response = [" + theResponse
 						+ "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -730,7 +743,7 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendCreate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: Create Response = ["
+				logger.debug("testResellerId: Create Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -755,7 +768,7 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: ADD Update Response = ["
+				logger.debug("testResellerId: ADD Update Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -779,7 +792,7 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: CHG Update Response = ["
+				logger.debug("testResellerId: CHG Update Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);
@@ -803,7 +816,7 @@ public class NSContactController extends BaseNSController{
 				theResponse = theContact.sendUpdate();
 
 				// -- Output all of the response attributes
-				System.out.println("testResellerId: REM Update Response = ["
+				logger.debug("testResellerId: REM Update Response = ["
 						+ theResponse + "]\n\n");
 
 				this.handleResponse(theResponse);

@@ -39,9 +39,6 @@ import com.verisign.epp.codec.relateddomainext.EPPRelatedDomainExtPeriod;
 import com.verisign.epp.codec.resellerext.EPPResellerExtUpdate.Action;
 import com.verisign.epp.codec.rgpext.EPPRgpExtReport;
 import com.verisign.epp.codec.rgpext.EPPRgpExtReportText;
-import com.verisign.epp.codec.secdnsext.v11.EPPSecDNSAlgorithm;
-import com.verisign.epp.codec.secdnsext.v11.EPPSecDNSExtDsData;
-import com.verisign.epp.codec.secdnsext.v11.EPPSecDNSExtKeyData;
 import com.verisign.epp.interfaces.EPPCommandException;
 import com.verisign.epp.interfaces.EPPDomain;
 import com.verisign.epp.interfaces.EPPSession;
@@ -62,7 +59,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/domain")
@@ -70,7 +69,7 @@ public class NSDomainController extends BaseNSController{
 	
 	private static org.slf4j.Logger logger = LoggerFactory.getLogger(NSDomainController.class);
 
-	@ApiOperation(value="createDomain", notes="" +
+	@ApiOperation(value="createDomain", notes="未实现SecDNSCreate（安全的带证书验证dns设置？）" +
 			"参数示例：" +
 			"{\n" +
 			"  \"adminContact\": \"hihexo\",\n" +
@@ -113,7 +112,13 @@ public class NSDomainController extends BaseNSController{
 				theDomain.addDomainName(theDomainName);
 				theDomain.setSubProductID(params.getDomainProductID());
 				theDomain.setAuthString(getAuthString(params));
+				if(StringUtils.isNotEmpty(params.getAllocationToken())){
+					theDomain.setAllocationToken(params.getAllocationToken());
+				}
 
+				if(StringUtils.isNotEmpty(params.getIdnLangTag())){
+					theDomain.setIDNLangTag(params.getIdnLangTag());
+				}
 
 				for (String s:params.getHostNames()) {
 					theDomain.addHostName(s);//DNS 解析？？// FIXME: 2017/4/25
@@ -199,6 +204,7 @@ public class NSDomainController extends BaseNSController{
 			}
 			catch (Exception ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 		}
 		catch (InvalidateSessionException ex) {
@@ -267,6 +273,7 @@ public class NSDomainController extends BaseNSController{
 			}
 			catch (Exception ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
 		}
@@ -281,252 +288,6 @@ public class NSDomainController extends BaseNSController{
 
 		printEnd("testRelatedDomainCreate");
 		return renderError("unknown");
-	}
-
-	/**
-	 * <code>EPPDomain.sendCreate</code> for secDNS 1.1 using the
-	 * DS Data Interface. The VeriSign servers only support the DS Data
-	 * Interface. The following tests will be executed:<br>
-	 * <ol>
-	 * <li>Create for a Secure Delegation using the DS Data Interface with one
-	 * DS.
-	 * <li>Create for a Secure Delegation using the DS Data Interface with two
-	 * DS. One DS created from key data.
-	 * </ol>
-	 */
-	@ApiOperation(value="createdsdata",notes="{\n" +
-			"  \"authStr\": \"authstring\",\n" +
-			"  \"domainName\": \"hihexo.com\",\n" +
-			"  \"dsData\": {\n" +
-			"    \"alg\": 3,\n" +
-			"    \"digest\": \"49FD46E6C4B45C55D4AC\",\n" +
-			"    \"digestType\": 1,\n" +
-			"    \"keyTag\": 12345\n" +
-			"  },\n" +
-			"  \"keyData\": {\n" +
-			"    \"alg\": 5,\n" +
-			"    \"flags\": 257,\n" +
-			"    \"protocol\": 3,\n" +
-			"    \"pubKey\": \"AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5ZjvxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUspoZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIOOvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==\"\n" +
-			"  }\n" +
-			"}")
-//	@RequestMapping(value = "/createdsdata",method = RequestMethod.POST)
-//	@SystemControllerLog(description = "创建DSdata")
-//	@ResponseBody
-	public Object  doCreateDsDataInterface(HttpServletRequest request, @RequestBody NSDomainDsDataCreateParam params) {
-		printStart("CreateDsDataInterface");
-
-		EPPSession theSession = null;
-		EPPDomainCreateResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = params.getDomainName();
-
-				logger.debug
-						("CreateDsDataInterface(1): domain = "
-								+ theDomainName
-								+ ", Create for a Secure Delegation using the DS Data Interface with one DS");
-
-				theDomain.setTransId(getClientTransId(request));
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(params.getDomainProductID());
-				theDomain.setAuthString(params.getAuthStr());
-
-				// Add DS
-				List dsDataList = new ArrayList();
-//				dsDataList.add(new EPPSecDNSExtDsData(12345,
-//						EPPSecDNSAlgorithm.DSA,
-//						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-//						"49FD46E6C4B45C55D4AC"));
-
-				// Key Data associated with DS to add
-//				EPPSecDNSExtKeyData keyData = new EPPSecDNSExtKeyData();
-//				keyData.setFlags(EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP);
-//				keyData.setProtocol(EPPSecDNSExtKeyData.DEFAULT_PROTOCOL);
-//				keyData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-//				keyData.setPubKey("AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5Zj"
-//						+ "vxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUs"
-//						+ "poZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2"
-//						+ "AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIO"
-//						+ "OvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==");
-
-//				dsDataList.add(keyData.toDsData(
-//						"testCreateDsDataInterface.com",
-//						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE));
-
-				if(params.getDsData()!=null){
-					dsDataList.add(params.getDsData());
-				}
-				if(params.getKeyData()!=null){
-					dsDataList.add(params.getKeyData().toDsData(params.getDomainName(),EPPSecDNSExtDsData.SHA1_DIGEST_TYPE));
-				}
-				if(dsDataList.size() > 0){
-					theDomain.setSecDNSCreate(dsDataList);
-				}
-
-				theResponse = theDomain.sendCreate();
-
-				return renderSuccess(theResponse);
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("CreateDsDataInterface");
-		return renderError("unknown");
-	}
-
-	/**
-	 * <code>EPPDomain.sendUpdate</code> for secDNS 1.1 using the
-	 * DS Data Interface. The VeriSign servers only support the DS Data
-	 * Interface. The following tests will be executed:<br>
-	 * <ol>
-	 * <li>Adding and Removing DS Data using the DS Data Interface.
-	 * <li>Remove all DS using &lt;secDNS:rem&gt; with &lt;secDNS:all&gt;.
-	 * <li>Replacing all DS Data using the DS Data Interface.
-	 * </ol>
-	 */
-//	@RequestMapping(value = "/updatedsdata",method = RequestMethod.POST) 	@SystemControllerLog(description = "更新DSdata")
-//	@ResponseBody
-	public ResultVo doUpdateDsDataInterface(HttpServletRequest request, @RequestBody NSDomainParam params) {
-		printStart("UpdateDsDataInterface");
-
-		EPPSession theSession = null;
-		EPPResponse theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug
-						("testUpdateDsDataInterface(1): domain = "
-								+ theDomainName
-								+ ", Adding and Removing DS Data using the DS Data Interface");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(params.getDomainProductID());
-				theDomain.setAuthString("ClientX");
-
-				List addDsDataList = new ArrayList();
-				addDsDataList.add(new EPPSecDNSExtDsData(12345,
-						EPPSecDNSAlgorithm.DSA,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"49FD46E6C4B45C55D4AC"));
-				List remDsDataList = new ArrayList();
-				remDsDataList.add(new EPPSecDNSExtDsData(12345,
-						EPPSecDNSAlgorithm.DSA,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"38EC35D5B3A34B44C39B"));
-				// Add and remove DS data
-				theDomain.setSecDNSUpdate(addDsDataList, remDsDataList);
-
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("testUpdateDsDataInterface(1): Response = ["
-						+ theResponse + "]\n\n");
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug("\n----------------------------------------------------------------");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("testUpdateDsDataInterface(2): domain = "
-								+ theDomainName
-								+ ", Remove all DS and Key Data using <secDNS:rem> with <secDNS:all>");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theDomain.setAuthString("ClientX");
-
-				// Remove all DS data
-				theDomain.setSecDNSUpdate(null, com.verisign.epp.namestore.interfaces.NSDomain.REM_ALL_DS);
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("testUpdateDsDataInterface(2): Response = ["
-						+ theResponse + "]\n\n");
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug("\n----------------------------------------------------------------");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("testUpdateDsDataInterface(3): domain = "
-								+ theDomainName
-								+ ", Replacing all DS Data using the DS Data Interface");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-				theDomain.setAuthString("ClientX");
-
-				List addDsDataList = new ArrayList();
-				addDsDataList.add(new EPPSecDNSExtDsData(12345,
-						EPPSecDNSAlgorithm.DSA,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"49FD46E6C4B45C55D4AC"));
-				// Replace all DS data
-				theDomain.setSecDNSUpdate(addDsDataList, com.verisign.epp.namestore.interfaces.NSDomain.REM_ALL_DS);
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("testUpdateDsDataInterface(3): Response = ["
-						+ theResponse + "]\n\n");
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("testUpdateDsDataInterface");
-		return null;
 	}
 
 	/**
@@ -582,6 +343,9 @@ public class NSDomainController extends BaseNSController{
 							true);
 					theDomain.addExtension(extension);
 				}
+				if(StringUtils.isNotEmpty(params.getAllocationToken())){
+					theDomain.setAllocationToken(params.getAllocationToken());
+				}
 
 				theResponse = theDomain.sendCheck();
 				this.handleResponse(theResponse);
@@ -635,13 +399,18 @@ public class NSDomainController extends BaseNSController{
 				theDomain.setSubProductID(params.getDomainProductID());
 				theDomain.setHosts(com.verisign.epp.namestore.interfaces.NSDomain.HOSTS_ALL);
 				theDomain.setWhoisInfo(true);
+
+				if(StringUtils.isNotEmpty(params.getAllocationToken())){
+					theDomain.setAllocationToken(params.getAllocationToken());
+				}
+
 				theResponse = theDomain.sendInfo();
 				this.handleResponse(theResponse);
 				return renderSuccess(theResponse);
 			}
 			catch (Exception ex) {
 				TestUtil.handleException(theSession, ex);
-				return renderError("unknown");
+				return renderError(ex.getMessage());
 			}
 		}
 		catch (InvalidateSessionException ex) {
@@ -679,6 +448,10 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.addDomainName(params.getDomainName());
 				theDomain.setSubProductID(params.getDomainProductID());
+
+				if(StringUtils.isNotEmpty(params.getAllocationToken())){
+					theDomain.setAllocationToken(params.getAllocationToken());
+				}
 
 				theResponse = theDomain.sendDelete();
 
@@ -742,6 +515,10 @@ public class NSDomainController extends BaseNSController{
 				theDomain.setPeriodLength(params.getPeriod());
 				theDomain.setPeriodUnit(params.getPeriodUnit());
 
+				if(StringUtils.isNotEmpty(params.getAllocationToken())){
+					theDomain.setAllocationToken(params.getAllocationToken());
+				}
+
 				theResponse = theDomain.sendRenew();
 
 				// -- Output all of the response attributes
@@ -758,6 +535,7 @@ public class NSDomainController extends BaseNSController{
 
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
 			this.handleResponse(theResponse);
@@ -801,6 +579,10 @@ public class NSDomainController extends BaseNSController{
 
 				theDomain.addDomainName(theDomainName);
 				theDomain.setSubProductID(params.getDomainProductID());
+
+				if(StringUtils.isNotEmpty(params.getAllocationToken())){
+					theDomain.setAllocationToken(params.getAllocationToken());
+				}
 
 				// Add attributes
 				// Is the contact mapping supported?
@@ -882,331 +664,7 @@ public class NSDomainController extends BaseNSController{
 		return renderError("unknown");
 	}
 
-	/**
-	 * <code>NSDomain.sendTransfer</code> command.
-	 */
-	@RequestMapping(value = "/transfer/request",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
-	@ResponseBody
-	public ResultVo  doDomainTransfer(HttpServletRequest request,@RequestBody  NSDomainTransferParam params) {
-		printStart("doDomainTransfer");
 
-		EPPSession theSession = null;
-		EPPDomainTransferResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
-
-			try {
-
-				logger.debug("\ndomainTransfer: Domain " + theDomainName
-						+ " transfer request");
-
-				theDomain.setTransferOpCode(EPPDomain.TRANSFER_REQUEST);
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.setAuthString(params.getAuthStr());
-
-				theDomain.addDomainName(params.getDomainName());
-				theDomain.setSubProductID(params.getDomainProductID());
-
-				theDomain.setPeriodLength(params.getPeriod());
-
-				theDomain.setPeriodUnit(params.getPeriodUnit());
-
-				// Execute the transfer query
-				theResponse = theDomain.sendTransfer();
-
-				// -- Output all of the response attributes
-				logger.debug("domainTransfer: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output required response attributes using accessors
-				logger.debug("domainTransfer: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainTransfer: request client = "
-						+ theResponse.getRequestClient());
-
-				logger.debug("domainTransfer: action client = "
-						+ theResponse.getActionClient());
-
-				logger.debug("domainTransfer: transfer status = "
-						+ theResponse.getTransferStatus());
-
-				logger.debug("domainTransfer: request date = "
-						+ theResponse.getRequestDate());
-
-				logger.debug("domainTransfer: action date = "
-						+ theResponse.getActionDate());
-
-				// -- Output optional response attributes using accessors
-				if (theResponse.getExpirationDate() != null) {
-					logger.debug("domainTransfer: expiration date = "
-							+ theResponse.getExpirationDate());
-				}
-
-				this.handleResponse(theResponse);
-				return renderSuccess(theResponse);
-			}
-
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainTransfer");
-		return renderError("fail");
-	}
-
-	@RequestMapping(value = "/transfer/query",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
-	@ResponseBody
-	public ResultVo  doDomainTransferQuery(HttpServletRequest request,@RequestBody  NSDomainParam params) {
-		printStart("doDomainTransfer");
-
-		EPPSession theSession = null;
-		EPPDomainTransferResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
-
-			// Transfer Query
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				logger.debug("\ndomainTransfer: Domain " + theDomainName
-						+ " transfer query");
-
-				theDomain.setTransferOpCode(EPPDomain.TRANSFER_QUERY);
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(params.getDomainName());
-				theDomain.setSubProductID(params.getDomainProductID());
-
-				// Execute the transfer query
-				theResponse = theDomain.sendTransfer();
-
-				// -- Output all of the response attributes
-				logger.debug("domainTransferQuery: Response = ["
-						+ theResponse + "]\n\n");
-
-				// -- Output required response attributes using accessors
-				logger.debug("domainTransferQuery: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainTransferQuery: request client = "
-						+ theResponse.getRequestClient());
-
-				logger.debug("domainTransferQuery: action client = "
-						+ theResponse.getActionClient());
-
-				logger.debug("domainTransferQuery: transfer status = "
-						+ theResponse.getTransferStatus());
-
-				logger.debug("domainTransferQuery: request date = "
-						+ theResponse.getRequestDate());
-
-				logger.debug("domainTransferQuery: action date = "
-						+ theResponse.getActionDate());
-
-				// -- Output optional response attributes using accessors
-				if (theResponse.getExpirationDate() != null) {
-					logger.debug
-							("domainTransferQuery: expiration date = "
-									+ theResponse.getExpirationDate());
-				}
-				return renderSuccess(theResponse);
-			}
-
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-				return renderError(ex.getMessage());
-			}
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainTransfer");
-		return renderError("unknown");
-	}
-
-	@RequestMapping(value = "/transfer/cancel",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
-	@ResponseBody
-	public ResultVo  doDomainTransferCancel(HttpServletRequest request,@RequestBody  NSDomainParam params) {
-		printStart("doDomainTransfer");
-
-		EPPSession theSession = null;
-		EPPDomainTransferResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
-
-			// Transfer Cancel
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				logger.debug("\ndomainTransfer: Domain " + theDomainName
-						+ " transfer cancel");
-
-				theDomain.setTransferOpCode(EPPDomain.TRANSFER_CANCEL);
-
-				theDomain.addDomainName(params.getDomainName());
-				theDomain.setSubProductID(params.getDomainProductID());
-
-				// Execute the transfer cancel
-				theResponse = theDomain.sendTransfer();
-
-				// -- Output all of the response attributes
-				logger.debug("domainTransfer: Response = [" + theResponse
-						+ "]\n\n");
-				return renderSuccess(theResponse);
-			}
-
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainTransfer");
-		return renderError("fail");
-	}
-
-	@RequestMapping(value = "/transfer/reject",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
-	@ResponseBody
-	public ResultVo  doDomainTransferReject(HttpServletRequest request,@RequestBody  NSDomainParam params) {
-		printStart("doDomainTransfer");
-
-		EPPSession theSession = null;
-		EPPDomainTransferResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
-
-			// Transfer Reject
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				logger.debug("\ndomainTransfer: Domain " + theDomainName
-						+ " transfer reject");
-
-				theDomain.setTransferOpCode(EPPDomain.TRANSFER_REJECT);
-
-				theDomain.addDomainName(params.getDomainName());
-				theDomain.setSubProductID(params.getDomainProductID());
-
-				// Execute the transfer cancel
-				theResponse = theDomain.sendTransfer();
-
-				// -- Output all of the response attributes
-				logger.debug("domainTransfer: Response = [" + theResponse
-						+ "]\n\n");
-				return renderSuccess(theResponse);
-			}
-
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainTransfer");
-		return renderError("fail");
-	}
-
-	@RequestMapping(value = "/transfer/approve",method = RequestMethod.POST) 	@SystemControllerLog(description = "转出域名")
-	@ResponseBody
-	public ResultVo  doDomainTransferApprove(HttpServletRequest request,@RequestBody  NSDomainParam params) {
-		printStart("doDomainTransfer");
-
-		EPPSession theSession = null;
-		EPPDomainTransferResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
-
-			// Transfer Approve
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				logger.debug("\ndomainTransfer: Domain transfer approve");
-
-				theDomain.setTransferOpCode(EPPDomain.TRANSFER_APPROVE);
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				// Execute the transfer cancel
-				theResponse = theDomain.sendTransfer();
-
-				// -- Output all of the response attributes
-				logger.debug("domainTransfer: Response = [" + theResponse
-						+ "]\n\n");
-				return renderSuccess(theResponse);
-			}
-
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainTransfer");
-		return renderError("fail");
-	}
 	/**
 	 * <code>NSDomain.sendSync</code> command.
 	 */
@@ -1249,6 +707,7 @@ public class NSDomainController extends BaseNSController{
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
 		}
@@ -1269,7 +728,8 @@ public class NSDomainController extends BaseNSController{
 	 * <code>NSDomain.sendRestoreRequest</code> command.
 	 */
 	@RequestMapping(value = "/restorerequest",method = RequestMethod.POST) 	@SystemControllerLog(description = "RestoreRequest")
-	public void  doDomainRestoreRequest(HttpServletRequest request) {
+	@ResponseBody
+	public ResultVo  doDomainRestoreRequest(HttpServletRequest request,@RequestBody  NSDomainParam params) {
 		printStart("doDomainRestoreRequest");
 
 		EPPSession theSession = null;
@@ -1277,7 +737,7 @@ public class NSDomainController extends BaseNSController{
 		try {
 			theSession = this.borrowSession();
 			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
+			String theDomainName = params.getDomainName();
 
 			try {
 				theDomain.setTransId(getClientTransId(request));
@@ -1286,7 +746,7 @@ public class NSDomainController extends BaseNSController{
 						+ theDomainName + " restore request");
 
 				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				// Execute restore request
 				theResponse = theDomain.sendRestoreRequest();
@@ -1294,13 +754,13 @@ public class NSDomainController extends BaseNSController{
 				// -- Output all of the response attributes
 				logger.debug("domainRestoreRequest: Response = ["
 						+ theResponse + "]\n\n");
-
+				this.handleResponse(theResponse);
+				return renderSuccess(theResponse);
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
-
-			this.handleResponse(theResponse);
 
 		}
 		catch (InvalidateSessionException ex) {
@@ -1313,13 +773,16 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainRestoreRequest");
+		return renderError("fail");
 	}
 
 	/**
 	 * <code>NSDomain.sendRestoreReport</code> command.
 	 */
+	@ApiOperation(value = "域名恢复报告上送？" ,notes = "")
 	@RequestMapping(value = "/restorereport",method = RequestMethod.POST) 	@SystemControllerLog(description = "restore报告")
-	public void  doDomainRestoreReport(HttpServletRequest request) {
+	@ResponseBody
+	public ResultVo  doDomainRestoreReport(HttpServletRequest request,@RequestBody  NSDomainRestoreReportParam params) {
 		printStart("doDomainRestoreReport");
 
 		EPPSession theSession = null;
@@ -1327,7 +790,7 @@ public class NSDomainController extends BaseNSController{
 		try {
 			theSession = this.borrowSession();
 			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
+			String theDomainName = params.getDomainName();
 
 			try {
 				theDomain.setTransId(getClientTransId(request));
@@ -1336,36 +799,30 @@ public class NSDomainController extends BaseNSController{
 						+ theDomainName + " restore request");
 
 				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
+				theDomain.setSubProductID(params.getDomainProductID());
 
 				EPPRgpExtReport theReport = new EPPRgpExtReport();
 				theReport
-						.setPreData("Pre-delete whois data goes here. Both XML and free text are allowed");
+						.setPreData(params.getPreData());
 				theReport
-						.setPostData("Post-delete whois data goes here. Both XML and free text are allowed");
-				theReport.setDeleteTime(new Date());
-				theReport.setRestoreTime(new Date());
+						.setPostData(params.getPostData());
 
-				theReport.setRestoreReason(new EPPRgpExtReportText(
-						"Registrant Error"));
+				DateTimeFormatter format = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+				DateTime dateTime = DateTime.parse(params.getDeleteTime(), format);
 
-				theReport
-						.setStatement1(new EPPRgpExtReportText(
-								"This registrar has not"
-										+ " restored the Registered Domain in order to "
-										+ "assume the rights to use or sell the Registered"
-										+ " Name for itself or for any third party"));
+				theReport.setDeleteTime(dateTime.toDate());
+				dateTime = DateTime.parse(params.getRestoreTime(), format);
+				theReport.setRestoreTime(dateTime.toDate());
+
+				theReport.setRestoreReason(new EPPRgpExtReportText(params.getRestoreReason()));
 
 				theReport
-						.setStatement2(new EPPRgpExtReportText(
-								"The information in this report "
-										+ " is true to best of this registrar's knowledge, and this"
-										+ "registrar acknowledges that intentionally supplying false"
-										+ " information in this report shall "
-										+ "constitute  an incurable material breach of the Registry-Registrar"
-										+ " Agreement"));
+						.setStatement1(new EPPRgpExtReportText(params.getRestoreStatement1()));
 
-				theReport.setOther("other stuff");
+				theReport
+						.setStatement2(new EPPRgpExtReportText(params.getRestoreStatement2()));
+
+				theReport.setOther(params.getOtherStuff());
 
 				// Execute restore report
 				theDomain.setReport(theReport);
@@ -1374,13 +831,14 @@ public class NSDomainController extends BaseNSController{
 				// -- Output all of the response attributes
 				logger.debug("domainRestoreReport: Response = ["
 						+ theResponse + "]\n\n");
-
+				this.handleResponse(theResponse);
+				return renderSuccess(theResponse);
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
-			this.handleResponse(theResponse);
 
 		}
 		catch (InvalidateSessionException ex) {
@@ -1393,237 +851,21 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("doDomainRestoreReport");
+		return renderError("fail");
 	}
 
 	/**
-	 * <code>NSDomain.sendCreate</code> command with IDN tag
-	 * extension.
-	 */
-	@RequestMapping(value = "/idncreate",method = RequestMethod.POST)
-	@SystemControllerLog(description = "创建idn")
-	public void  doDomainIDNCreate(HttpServletRequest request) {
-		printStart("doDomainIDNCreate");
-
-		EPPSession theSession = null;
-		EPPDomainCreateResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with IDN tag");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setAuthString("ClientX");
-
-				theDomain.setIDNLangTag("en");
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainIDNCreate");
-	}
-
-	/**
-	 * Unit test using NSDomain.setAllocationToken(String) with domain check,
-	 * domain info, domain create, domain update, and domain transfer.
-	 */
-	@RequestMapping(value = "/allocationtoken",method = RequestMethod.POST) 	@SystemControllerLog(description = "AllocationToken")
-	public void  testAllocationToken(HttpServletRequest request) {
-		printStart("testAllocationToken");
-
-		EPPSession theSession = null;
-		EPPResponse theResponse = null;
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-
-			// Allocation Token with Domain Check
-			try {
-				logger.debug
-						("\ntestAllocationToken: Domain check with allocation token");
-
-				theDomain.setTransId("ABC-12345");
-
-				theDomain.addDomainName("example.tld");
-				theDomain.setSubProductID("tld");
-
-				theDomain.setAllocationToken("abc123");
-
-				theResponse = theDomain.sendCheck();
-
-				// -- Output all of the response attributes
-				logger.debug("testAllocationToken: Check Response = ["
-						+ theResponse + "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			// Allocation Token with Domain Info
-			try {
-				logger.debug
-						("\ntestAllocationToken: Domain info with allocation token");
-
-				theDomain.setTransId("ABC-12345");
-
-				theDomain.addDomainName("example.tld");
-				theDomain.setSubProductID("tld");
-
-				// Set empty allocation token extension
-				theDomain.setAllocationToken(null);
-
-				theResponse = theDomain.sendInfo();
-
-				// -- Output all of the response attributes
-				logger.debug("testAllocationToken: Info Response = ["
-						+ theResponse + "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			// Allocation Token with Domain Create
-			try {
-				logger.debug
-						("\ntestAllocationToken: Domain create with allocation token");
-
-				theDomain.setTransId("ABC-12345");
-
-				theDomain.addDomainName("example.tld");
-				theDomain.setSubProductID("tld");
-				theDomain.setRegistrant("jd1234");
-				theDomain.addContact("sh8013", com.verisign.epp.namestore.interfaces.NSDomain.CONTACT_ADMINISTRATIVE);
-				theDomain.addContact("sh8013", com.verisign.epp.namestore.interfaces.NSDomain.CONTACT_TECHNICAL);
-				theDomain.setAuthString("2fooBAR");
-				theDomain.setAllocationToken("abc123");
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("testAllocationToken: Create Response = ["
-						+ theResponse + "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			// Allocation Token with Domain Transfer
-			try {
-				logger.debug
-						("\ntestAllocationToken: Domain transfer request with allocation token");
-
-				theDomain.setTransId("ABC-12345");
-
-				theDomain.addDomainName("example.tld");
-				theDomain.setSubProductID("tld");
-				theDomain.setAuthString("2fooBAR");
-				theDomain.setTransferOpCode(com.verisign.epp.namestore.interfaces.NSDomain.TRANSFER_REQUEST);
-
-				theDomain.setAllocationToken("abc123");
-
-				theResponse = theDomain.sendTransfer();
-
-				// -- Output all of the response attributes
-				logger.debug("testAllocationToken: Transfer Response = ["
-						+ theResponse + "]\n\n");
-
-				this.handleResponse(theResponse);
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			// Allocation Token with Domain Update
-			try {
-				logger.debug
-						("\ntestAllocationToken: Domain update with allocation token");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName("example1.tld");
-				theDomain.setSubProductID("tld");
-
-				theDomain.setAllocationToken("abc123");
-
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("testAllocationToken: Update Response = ["
-						+ theResponse + "]\n\n");
-
-				this.handleResponse(theResponse);
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("testAllocationToken");
-	}
-
-	/**
-	 * Unit test using {@link com.verisign.epp.namestore.interfaces.NSDomain#setResellerId(String)} to set the
+	 * using {@link com.verisign.epp.namestore.interfaces.NSDomain#setResellerId(String)} to set the
 	 * reseller identifier on create and
 	 * {@link com.verisign.epp.namestore.interfaces.NSDomain#updateResellerId(Action, String)}
 	 * to update the reseller identifier of an existing domain.
+	 *
 	 */
+	@ApiOperation(value = "更新resslerid信息",notes = "创建或更新域名的resslerId信息，待实现")
 	@RequestMapping(value = "/resellerid",method = RequestMethod.POST) 	@SystemControllerLog(description = "ResellerId")
-	public void  testResellerId(HttpServletRequest request) {
+	@ResponseBody
+	@Deprecated
+	public ResultVo  testResellerId(HttpServletRequest request, @RequestBody NSDomainParam params) {
 		printStart("testResellerId");
 
 		EPPSession theSession = null;
@@ -1658,6 +900,7 @@ public class NSDomainController extends BaseNSController{
 			}
 			catch (EPPCommandException ex) {
 				TestUtil.handleException(theSession, ex);
+				return renderError(ex.getMessage());
 			}
 
 			// Reseller Identifier with Domain Update - ADD
@@ -1743,14 +986,18 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("testResellerId");
+		return renderError("fail");
 	}
 
 	/**
 	 * Unit test processing responses asynchronous from the commands. This is a
 	 * test of the use of pipelining.
 	 */
+	@ApiOperation(value = "异步发送命令" ,notes = "通过队列TransId查询响应结果，应用于自定义任务，因为共享同一个session，或者同时发送多个请求给server时，使用该接口逻辑，待实现具体逻辑")
 	@RequestMapping(value = "/asynccommands",method = RequestMethod.POST) 	@SystemControllerLog(description = "AsyncCommands")
-	public void  doAsyncCommands() {
+	@ResponseBody
+	@Deprecated
+	public ResultVo  doAsyncCommands(HttpServletRequest request, @RequestBody NSDomainParam params ) {
 		printStart("testAsyncCommands");
 
 		EPPSession theSession = null;
@@ -1760,15 +1007,15 @@ public class NSDomainController extends BaseNSController{
 
 			theSession = this.borrowSession();
 			if (!theSession.isModeSupported(EPPSession.MODE_ASYNC)) {
-				logger.debug("testAsyncCommands: Session "
+				logger.debug("doAsyncCommands: Session "
 						+ theSession.getClass().getName()
-						+ " does not support MODE_ASYNC, skipping test");
-				printEnd("testAsyncCommands (skipped)");
-				return;
+						+ " does not support MODE_ASYNC, skipping ");
+				printEnd("doAsyncCommands (skipped)");
+				return renderError("not support MODE_ASYNC");
 			}
 			previousSessionMode = theSession.setMode(EPPSession.MODE_ASYNC);
 			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-			String theDomainName = this.makeDomainName();
+			String theDomainName = params.getDomainName();
 
 			// Send 3 commands first
 			try {
@@ -1840,6 +1087,7 @@ public class NSDomainController extends BaseNSController{
 			ex.printStackTrace();
 			Assert.fail("testAsyncCommands(): Exception invalidating session: "
 					+ ex);
+			return renderError(ex.getMessage());
 		}
 		finally {
 
@@ -1850,421 +1098,7 @@ public class NSDomainController extends BaseNSController{
 		}
 
 		printEnd("testAsyncCommands");
-	}
-
-	/**
-	 * support secDNS-1.0 with NSDomain for backward compatibility.
-	 */
-	@RequestMapping(value = "/secdns10",method = RequestMethod.POST) 	@SystemControllerLog(description = "SecDNS10")
-	public void  doSecDNS10(HttpServletRequest request) {
-		printStart("testSecDNS10");
-
-		EPPSession theSession = null;
-		EPPDomainCreateResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with no optional attributes");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setAuthString("ClientX");
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with all optional attributes");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				for (int i = 0; i <= 20; i++) {
-					theDomain.addHostName(this.makeHostName(theDomainName));
-				}
-
-				// Is the contact mapping supported?
-				if (EPPFactory.getInstance().hasService(
-						EPPDomainMapFactory.NS_CONTACT)) {
-					// Add domain contacts
-					theDomain.addContact("SH0000",
-							EPPDomain.CONTACT_ADMINISTRATIVE);
-
-					theDomain.addContact("SH0000", EPPDomain.CONTACT_TECHNICAL);
-
-					theDomain.addContact("SH0000", EPPDomain.CONTACT_BILLING);
-				}
-
-				theDomain.setPeriodLength(10);
-
-				theDomain.setPeriodUnit(EPPDomain.PERIOD_YEAR);
-
-				theDomain.setAuthString("ClientX");
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with SecDNS Extension");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setAuthString("ClientX");
-
-				// -- Add secDNS Extension
-				// instantiate a secDNS:keyData object
-				EPPSecDNSExtKeyData keyData = new EPPSecDNSExtKeyData();
-				keyData.setFlags(EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP);
-				keyData.setProtocol(EPPSecDNSExtKeyData.DEFAULT_PROTOCOL);
-				keyData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				keyData.setPubKey("AQPmsXk3Q1ngNSzsH1lrX63mRIhtwkkK+5Zj"
-						+ "vxykBCV1NYne83+8RXkBElGb/YJ1n4TacMUs"
-						+ "poZap7caJj7MdOaADKmzB2ci0vwpubNyW0t2"
-						+ "AnaQqpy1ce+07Y8RkbTC6xCeEw1UQZ73PzIO"
-						+ "OvJDdjwPxWaO9F7zSxnGpGt0WtuItQ==");
-
-				// instantiate another secDNS:keyData object
-				EPPSecDNSExtKeyData keyData2 = new EPPSecDNSExtKeyData(
-						EPPSecDNSExtKeyData.FLAGS_ZONE_KEY_SEP,
-						EPPSecDNSExtKeyData.DEFAULT_PROTOCOL,
-						EPPSecDNSAlgorithm.RSASHA1,
-						"AQOxXpFbRp7+zPBoTt6zL7Af0aEKzpS4JbVB"
-								+ "5ofk5E5HpXuUmU+Hnt9hm2kMph6LZdEEL142"
-								+ "nq0HrgiETFCsN/YM4Zn+meRkELLpCG93Cu/H"
-								+ "hwvxfaZenUAAA6Vb9FwXQ1EMYRW05K/gh2Ge"
-								+ "w5Sk/0o6Ev7DKG2YiDJYA17QsaZtFw==");
-
-				// instantiate a secDNS:dsData object
-				EPPSecDNSExtDsData dsData = new EPPSecDNSExtDsData();
-				dsData.setKeyTag(34095);
-				dsData.setAlg(EPPSecDNSAlgorithm.RSASHA1);
-				dsData.setDigestType(EPPSecDNSExtDsData.SHA1_DIGEST_TYPE);
-				dsData.setDigest("6BD4FFFF11566D6E6A5BA44ED0018797564AA289");
-				dsData.setKeyData(keyData);
-
-				// instantiate another secDNS:dsData object
-				EPPSecDNSExtDsData dsData2 = new EPPSecDNSExtDsData(10563,
-						EPPSecDNSAlgorithm.RSASHA1,
-						EPPSecDNSExtDsData.SHA1_DIGEST_TYPE,
-						"9C20674BFF957211D129B0DFE9410AF753559D4B", keyData2);
-
-				// dsData Records
-				List dsDataRecords = new ArrayList();
-				dsDataRecords.add(dsData);
-				dsDataRecords.add(dsData2);
-
-				theDomain.setSecDNSCreate(dsDataRecords);
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("testSecDNS10");
-	}
-
-
-
-	/**
-	 * <code>NSDomain.sendCreate</code> command with COA extension.
-	 */
-	@RequestMapping(value = "/coacreate",method = RequestMethod.POST) 	@SystemControllerLog(description = "CoaCreate")
-	public void  doDomainCoaCreate(HttpServletRequest request) {
-		printStart("doDomainCreate");
-
-		EPPSession theSession = null;
-		EPPDomainCreateResp theResponse = null;
-
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new com.verisign.epp.namestore.interfaces.NSDomain(theSession);
-
-			try {
-				logger.debug
-						("\n----------------------------------------------------------------");
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("domainCreate: Create " + theDomainName
-						+ " with COA Extension");
-
-				theDomain.setTransId(getClientTransId(request));
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				theDomain.setAuthString("ClientX");
-
-				// Client Object Attributes
-				EPPCoaExtAttr attr = new EPPCoaExtAttr("KEY1", "value1");
-				List attrList = new ArrayList();
-				attrList.add(attr);
-				theDomain.setCoaCreate(attrList);
-
-				theResponse = theDomain.sendCreate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainCreate: Response = [" + theResponse
-						+ "]\n\n");
-
-				// -- Output response attributes using accessors
-				logger.debug("domainCreate: name = "
-						+ theResponse.getName());
-
-				logger.debug("domainCreate: expiration date = "
-						+ theResponse.getExpirationDate());
-
-			}
-			catch (Exception ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainCoaCreate");
-	}
-
-	/**
-	 * <code>NSDomain.sendUpdate</code> command with COA extension.
-	 */
-	@RequestMapping(value = "/coaupdate",method = RequestMethod.POST) 	@SystemControllerLog(description = "创建域名")  
-	public void  doDomainCoaUpdate(HttpServletRequest request) {
-		printStart("doDomainCoaUpdate");
-
-		EPPSession theSession = null;
-		EPPResponse theResponse = null;
-		try {
-			theSession = this.borrowSession();
-			com.verisign.epp.namestore.interfaces.NSDomain theDomain = new NSDomain(theSession);
-
-			try {
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("\ndomainUpdate: Domain " + theDomainName
-						+ " update adding a COA.");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				// Add attributes
-				// Is the contact mapping supported?
-				if (EPPFactory.getInstance().hasService(
-						EPPDomainMapFactory.NS_CONTACT)) {
-					theDomain.setUpdateAttrib(EPPDomain.CONTACT, "SH0000",
-							EPPDomain.CONTACT_BILLING, EPPDomain.ADD);
-				}
-
-				theDomain.setUpdateAttrib(EPPDomain.HOST,
-						this.makeHostName(theDomainName), EPPDomain.ADD);
-
-				theDomain.setUpdateAttrib(EPPDomain.STATUS,
-						new EPPDomainStatus(EPPDomain.STATUS_CLIENT_HOLD),
-						EPPDomain.ADD);
-
-				// Remove attributes
-				theDomain.setUpdateAttrib(EPPDomain.HOST,
-						this.makeHostName(theDomainName), EPPDomain.REMOVE);
-
-				theDomain.setUpdateAttrib(EPPDomain.STATUS,
-						new EPPDomainStatus(EPPDomain.STATUS_CLIENT_HOLD),
-						EPPDomain.REMOVE);
-
-				// Is the contact mapping supported?
-				if (EPPFactory.getInstance().hasService(
-						EPPDomainMapFactory.NS_CONTACT)) {
-					theDomain.setUpdateAttrib(EPPDomain.CONTACT, "SH0000",
-							EPPDomain.CONTACT_BILLING, EPPDomain.REMOVE);
-				}
-
-				// Update the authInfo value
-				theDomain.setAuthString("new-auth-info-123");
-
-				EPPCoaExtAttr attr = new EPPCoaExtAttr("KEY1", "value1");
-				List addAttrs = new ArrayList();
-				addAttrs.add(attr);
-
-				theDomain.setCoaUpdateForPut(addAttrs);
-
-				// Execute update
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainUpdate adding a COA: Response = ["
-						+ theResponse + "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-
-			try {
-
-				theDomain.setTransId(getClientTransId(request));
-
-				String theDomainName = this.makeDomainName();
-
-				logger.debug("\ndomainUpdate: Domain " + theDomainName
-						+ " update removing a COA.");
-
-				theDomain.addDomainName(theDomainName);
-				theDomain.setSubProductID(NSSubProduct.COM);
-
-				// Add attributes
-				// Is the contact mapping supported?
-				if (EPPFactory.getInstance().hasService(
-						EPPDomainMapFactory.NS_CONTACT)) {
-					theDomain.setUpdateAttrib(EPPDomain.CONTACT, "SH0000",
-							EPPDomain.CONTACT_BILLING, EPPDomain.ADD);
-				}
-
-				theDomain.setUpdateAttrib(EPPDomain.HOST,
-						this.makeHostName(theDomainName), EPPDomain.ADD);
-
-				theDomain.setUpdateAttrib(EPPDomain.STATUS,
-						new EPPDomainStatus(EPPDomain.STATUS_CLIENT_HOLD),
-						EPPDomain.ADD);
-
-				// Remove attributes
-				theDomain.setUpdateAttrib(EPPDomain.HOST,
-						this.makeHostName(theDomainName), EPPDomain.REMOVE);
-
-				theDomain.setUpdateAttrib(EPPDomain.STATUS,
-						new EPPDomainStatus(EPPDomain.STATUS_CLIENT_HOLD),
-						EPPDomain.REMOVE);
-
-				// Is the contact mapping supported?
-				if (EPPFactory.getInstance().hasService(
-						EPPDomainMapFactory.NS_CONTACT)) {
-					theDomain.setUpdateAttrib(EPPDomain.CONTACT, "SH0000",
-							EPPDomain.CONTACT_BILLING, EPPDomain.REMOVE);
-				}
-
-				// Update the authInfo value
-				theDomain.setAuthString("new-auth-info-123");
-
-				EPPCoaExtKey key = new EPPCoaExtKey("KEY1");
-				List remAttrs = new ArrayList();
-				remAttrs.add(key);
-
-				theDomain.setCoaUpdateForRem(remAttrs);
-
-				// Execute update
-				theResponse = theDomain.sendUpdate();
-
-				// -- Output all of the response attributes
-				logger.debug("domainUpdate removing a COA: Response = ["
-						+ theResponse + "]\n\n");
-
-				this.handleResponse(theResponse);
-
-			}
-			catch (EPPCommandException ex) {
-				TestUtil.handleException(theSession, ex);
-			}
-		}
-		catch (InvalidateSessionException ex) {
-			this.invalidateSession(theSession);
-			theSession = null;
-		}
-		finally {
-			if (theSession != null)
-				this.returnSession(theSession);
-		}
-
-		printEnd("doDomainCoaUpdate");
+		return renderError("fail");
 	}
 
 } // End class NSDomainTst

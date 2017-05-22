@@ -15,6 +15,7 @@ import java.util.Map;
 @ToString(callSuper=true,includeFieldNames=true)
 public class NSDomainCreateParam extends BaseParam{
     private String[] hostNames = {};
+    private String idnLangTag ="en";
     private String  adminContact;
     private String  techContact;
     private String  billContact;
